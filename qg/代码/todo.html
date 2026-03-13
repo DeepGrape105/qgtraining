@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>qg</title>
+  <style>
+    /* 事项清单部分 */
+    * {
+      margin: 0;
+      padding: 0;
+    }
+
+    .w {
+      overflow: hidden;
+      position: relative;
+      margin: 100px auto;
+      width: 300px;
+    }
+
+    .redo {
+      margin: 10px auto;
+    }
+
+    input {
+      border: none;
+      outline: none;
+      font-size: 14px;
+      color: #4ecdc4;
+    }
+
+    .active {
+      color: #ccc;
+      text-decoration: line-through;
+      transition: 0.5 all;
+    }
+
+    .del:hover {
+      cursor: pointer;
+    }
+
+    .del,
+    .finish {
+      margin-right: 20px;
+    }
+
+    .w.action::before {
+      animation: move 2s linear;
+    }
+
+    .w::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-image: conic-gradient(#00cccf, #ff6b6b, #4ecdc4, #45b7d1, #00cccf);
+      border-radius: 5px;
+      z-index: 1;
+    }
+
+    @keyframes move {
+      0% {}
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    .w::after {
+      content: '';
+      position: absolute;
+      background: #FFFFFF;
+      top: 2px;
+      /* 用内边距效果 */
+      left: 2px;
+      right: 3px;
+      bottom: 2px;
+      border-radius: 5px;
+      z-index: 2;
+    }
+
+    .content {
+      position: relative;
+      left: 3px;
+      width: 98%;
+      height: 98%;
+      z-index: 3;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="w">
+    <div class="content">
+      <div class="redo">
+        <h2 class="top">To-do list</h2>
+        <div class="wrapper">
+          <input type="text" id="tx" placeholder="请输入代办事项"></input>
+        </div>
+        <div class="list">
+          <div class="item">
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+      //获取信息
+      const tx = document.querySelector('#tx')
+      const list = document.querySelector('.list')
+      const w = document.querySelector('.w')
+      //按下回车添加到下面
+      tx.addEventListener('keyup', function (e) {
+        if (e.key === 'Enter') {
+          //阻止默认行为
+          e.preventDefault()
+          //防止按下输出时文本域内容为空
+          if (tx.value.trim() !== '') {
+            const newThing = document.createElement('div')
+            newThing.className = 'item'
+            newThing.innerHTML = `
+            <span class="del">🗑️</span>
+            <input type="checkbox" name="" class="finish">
+           <span class="text">${tx.value}</span>
+          `
+            list.appendChild(newThing)
+            //获取当前元素的复选框和文字，这样每个复选框都有事件了
+            const ck = newThing.querySelector('.finish')
+            const del = newThing.querySelector('.del')
+            const span = newThing.querySelector('.text')
+            //给复选框添加事件
+            ck.addEventListener('click', function () {
+              if (this.checked === true) {
+                span.classList.add('active')
+              } else {
+                span.classList.remove('active')
+              }
+              //设置一个小动画，当所有事项都完成了，会添加一个动态边框晃动
+              const cks = document.querySelectorAll('.finish')
+              const flag = document.querySelectorAll('.finish:checked').length === cks.length
+              //根据是否是全部选完了
+              if (flag === true && cks.length > 0) {
+                w.classList.remove('action')
+                w.classList.add('action')
+              } else {
+                w.classList.remove('action')
+              }
+            })
+            //给删除按钮添加事件
+            del.addEventListener('click', function () {
+              newThing.remove()
+            })
+            //双击文字进行编辑操作
+            span.addEventListener('dblclick', function () {
+              //原来的文字先隐藏换成文本框
+              this.style.display = 'none'
+              //创建临时文本框
+              const input = document.createElement('input')
+              input.focus()
+              this.after(input)
+              //设置input属性值、
+              input.type = 'text'
+              input.value = this.innerHTML
+              //失去焦点时更新内容
+              input.addEventListener('blur', function () {
+                //如果删到没有东西就直接从行列中删除
+                if (input.value === '') {
+                  newThing.remove()
+                } else {
+                  span.innerHTML = input.value
+                  span.style.display = 'inline'
+                }
+                this.remove()
+              })
+            })
+          }
+          //清除文本域内容
+          tx.value = ''
+        }
+      })
+
+    </script>
+</body>
+
+</html>

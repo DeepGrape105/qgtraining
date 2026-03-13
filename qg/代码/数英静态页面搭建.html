@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <link rel="stylesheet" href="font_jb4t78mum7/iconfont.css">
+  <link rel="stylesheet" href="font_xyr1pbpvmbb/iconfont.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    li {
+      list-style: none;
+    }
+
+    a {
+      text-decoration: none;
+      color: #575959;
+    }
+
+    body {
+      margin: 50px 500px;
+    }
+
+    .header {
+      position: relative;
+      overflow: hidden;
+      padding: 0 80px;
+      height: 76px;
+      width: 1350px;
+    }
+
+    .header img {
+      position: absolute;
+      transform: translateY(-25px);
+    }
+
+    .header section {
+      position: absolute;
+      top: 25px;
+      right: 10px;
+      height: 40px;
+      width: 630px;
+      border: #FF2C63 2px solid;
+    }
+
+    section input,
+    section select,
+    section div {
+      float: left;
+      height: 100%;
+    }
+
+    section input {
+      width: 450px;
+    }
+
+    section div {
+      background: #FF2C63;
+      width: 113px;
+    }
+
+    input {
+      outline: none;
+      border: 0;
+      font-size: 14px;
+    }
+
+    select {
+      border-top: 0;
+      border-right: 0;
+    }
+
+    .wrapper {
+      overflow: hidden;
+      height: 1100px;
+      width: 1350px;
+    }
+
+    .wrapper-nav {
+      display: flex;
+      background: #333333;
+      padding: 0 80px;
+      height: 60px;
+      border-bottom: #CCCCCC 1px solid;
+      cursor: pointer;
+    }
+
+
+    .wrapper-nav li div,
+    .wrapper-nav li p {
+      float: left;
+    }
+
+    .wrapper-nav li div {
+      margin-top: 25px;
+      margin-left: 10px;
+      width: 8px;
+      height: 8px;
+      border-bottom: 1px solid #fff;
+      border-right: 1px solid #fff;
+      transform: rotate(45deg);
+      transition: all .2s;
+    }
+
+    .wrapper-nav li:hover {
+      color: #FF2C63;
+    }
+
+    .wrapper-nav li {
+      flex: 1;
+      color: #fff;
+      font-size: 18px;
+      line-height: 60px;
+    }
+
+    .wrapper-web {
+      display: flex;
+      padding: 0 80px;
+      background: #FFFFFF;
+      height: 70px;
+      border-bottom: #CCCCCC 1px solid;
+      cursor: pointer;
+    }
+
+    .wrapper-web li {
+      padding: 0 20px;
+      color: #A2A2A2;
+      font-size: 18px;
+      line-height: 70px;
+      transition: .2 all;
+    }
+
+    .wrapper-web li:hover {
+      transform: scale(1.1);
+    }
+
+    .wrapper-web li:first-child {
+      padding: 0 20px 0 0;
+    }
+
+    .wrapper-main {
+      position: relative;
+      padding: 0 80px;
+      height: 900px;
+    }
+
+    .left {
+      position: absolute;
+      width: 855px;
+      height: 900px;
+    }
+
+    h2 {
+      padding: 40px 0 0 0;
+      height: 140px;
+      width: 811px;
+      color: #403D3E;
+      font-size: 36px;
+    }
+
+    .tubiao {
+      position: relative;
+      width: 100%;
+
+      height: 40px;
+      border-bottom: #ccc 1px solid;
+      color: #ccc
+    }
+
+    .tubiaoleft {
+      position: absolute;
+      display: flex;
+      gap: 25px;
+      width: 390px;
+      height: 100%;
+    }
+
+    .tubiaoright {
+      position: absolute;
+      right: 0;
+      display: flex;
+      gap: 25px;
+      width: 300px;
+      height: 100%;
+    }
+
+    .tubiaoright img {
+      width: 28px;
+      height: 28px;
+    }
+
+    .content p {
+      color: #575959;
+      font-size: 19px;
+      height: 136px;
+      padding: 20px 0 0 0;
+    }
+
+    .slider {
+      position: absolute;
+      top: 40px;
+      right: 0;
+      background: #F3F3F3;
+      width: 320px;
+      height: 800px;
+    }
+
+    .content {
+      padding: 20px 0 20px 0;
+    }
+
+    .content img {
+      height: 570px;
+      width: 100%;
+      background: red;
+    }
+
+    .slider-header {
+      background: #C0A161;
+      padding: 13px 0 13px 13px;
+      height: 130px;
+      color: #fff;
+    }
+
+    .slider-header img {
+      float: left;
+      height: 60px;
+      width: 60px;
+    }
+
+    .slider-header .jieshao {
+      float: left;
+      margin-left: 20px;
+    }
+
+    .writer {
+      margin: 15px 13px 0 13px;
+      height: 210px;
+      border-bottom: #E8E8E8 1px solid;
+      color: #7C7C7C;
+      font-size: 14px;
+    }
+
+    .writer h4 {
+      color: blcak;
+      font-size: 20px;
+    }
+
+    .writer img {
+      float: left;
+      margin-right: 20px;
+      height: 73px;
+      width: 73px;
+    }
+
+    .introduce {
+      margin-top: 14px;
+      margin-bottom: 2px;
+      height: 100px;
+    }
+
+    .btn {
+      display: flex;
+      gap: 5px;
+      justify-content: space-around;
+    }
+
+    .btn1,
+    .btn2 {
+      float: left;
+      height: 38px;
+      width: 120px;
+      border-radius: 5px;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn1 {
+      background: #FE3368;
+      color: #fff;
+    }
+
+    .btn2 {
+      background: #FFFFFF;
+      border: 1px solid #EBEBEB;
+      color: #403D3E;
+    }
+
+    .care {
+      margin: 0 13px 0 13px;
+      padding-top: 12px;
+      height: 125px;
+      color: #7C7C7C;
+      border-bottom: #E8E8E8 1px solid;
+    }
+
+    .photo {
+      padding: 16px 2px 13px 10px;
+      display: flex;
+      gap: 10px;
+      height: 45px;
+      cursor: pointer;
+    }
+
+    .photo li,
+    .photo img {
+      height: 45px;
+      width: 45px;
+      border-radius: 5px;
+    }
+
+    .icon-gengduo {
+      font-size: 40px;
+    }
+
+    .wen {
+      padding: 0 13px 12px 13px;
+    }
+
+    .wen .more {
+      position: relative;
+      height: 50px;
+      font-size: 20px;
+    }
+
+    .p1,
+    .p2 {
+      position: absolute;
+      line-height: 57px;
+    }
+
+    .p2 {
+      right: 0;
+      color: #B2B0BB;
+    }
+
+    .havemore {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      height: 300px;
+    }
+
+    .havemore li {
+      height: 70px;
+      cursor: pointer;
+    }
+
+    .havemore li img {
+      float: left;
+    }
+
+    .havemore li img {
+      margin-right: 20px;
+      height: 70px;
+      width: 110px;
+    }
+
+    .havemore p {
+      font-size: 16px;
+    }
+
+    .icon-sousuo {
+      display: inline-block;
+      line-height: 40px;
+      transform: translateX(40px);
+      font-size: 25px;
+      color: #F3F3F3;
+    }
+
+    .content a {
+      text-decoration: underline;
+      color: #B2B0BB;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="header">
+    <img src="./img/数英.webp" alt="">
+    <section>
+      <input type="text">
+      <select name="type" id="1">
+        <option value="">文章</option>
+        <option value="">地区</option>
+        <option value="">作者</option>
+      </select>
+      <div class="search"><i class="iconfont icon-sousuo"></i></div>
+    </section>
+  </div>
+  <div class="wrapper">
+    <div class="wrapper-nav">
+      <li>首页</li>
+      <li>
+        <p>文章</p>
+        <div></div>
+      </li>
+      <li>
+        <p>项目</p>
+        <div></div>
+      </li>
+      <li>
+        <p>招聘</p>
+        <div></div>
+      </li>
+      <li>人</li>
+      <li>指数</li>
+      <li>课堂</li>
+      <li>数英</li>
+    </div>
+    <div class="wrapper-web">
+      <li><a href="">最新收录</a></li>
+      <li><a href="">头条</a></li>
+      <li><a href="">热文</a></li>
+      <li><a href="">精选</a></li>
+      <li><a href="">人气作者文章</a></li>
+    </div>
+    <div class="wrapper-main">
+      <div class="left">
+        <h2>36个有用又有趣的高质量小众网站，为你的创意灵:感充满电!</h2>
+        <img src="" alt="">
+        <div class="tubiao">
+          <div class="tubiaoleft">
+            <li>原创</li>
+            <li><i class="iconfont icon-zan"></i>赞 605</li>
+            <li><i class="iconfont icon-wenjian"></i>收藏 1127</li>
+            <li><i class="iconfont icon-comment"></i>评论 28</li>
+          </div>
+          <div class="tubiaoright">
+            <li>举报</li>
+            <li>2021-07-06</li>
+            <li><img src="img/qg1.jpg" alt=""></li>
+            <li><img src="img/qg1.jpg" alt=""></li>
+            <li><img src="img/qg1.jpg" alt=""></li>
+          </div>
+        </div>
+        <div class="content">
+          <img src="img/qg1.jpg" alt="">
+          <p>上期的宝藏小众网站合集<a href="">(点击可查看详置)</a>受到了大家的热烈欢迎，小野的点赞收藏通知从早到晚都没停下来过!<a href="">(这次也请继续，拜托各位了)</a></p>
+        </div>
+      </div>
+      <div class="slider">
+        <div class="slider-header">
+          <p>此文章被推荐至：</p>
+          <div class="jinxuan">
+            <img src="img/qg1.jpg" alt="">
+            <div class="jieshao">
+              <h3>精选文章</h3>
+              <p>好文章中的好文，很有料</p>
+            </div>
+          </div>
+        </div>
+        <div class="writer">
+          <p>作者</p>
+          <div class="introduce">
+            <img src="img/qg1.jpg" alt="">
+            <h4>小野</h4>
+            <p>编辑</p>
+            <p>数英 DIGITALING</p>
+          </div>
+          <div class="btn">
+            <button class="btn1">关注</button>
+            <button class="btn2">私信</button>
+          </div>
+        </div>
+        <div class="care">
+          <p>她关注的人</p>
+          <div class="photo">
+            <li><img src="img/qg1.jpg" alt=""></li>
+            <li><img src="img/qg1.jpg" alt=""></li>
+            <li><img src="img/qg1.jpg" alt=""></li>
+            <li><img src="img/qg1.jpg" alt=""></li>
+            <li><i class="iconfont icon-gengduo"></i></li>
+          </div>
+        </div>
+        <div class="wen">
+          <div class="more">
+            <p class="p1">她的文章</p>
+            <p class="p2">更多</p>
+          </div>
+          <div class="havemore">
+            <li><img src="img/qg1.jpg" alt="">
+              <p>迟早有一天，我要笑死在美团外卖评审团的评论区</p>
+            </li>
+            <li><img src="img/qg1.jpg" alt="">
+              <p>我们和3位广告人聊了聊，副业与收入</p>
+            </li>
+            <li><img src="img/qg1.jpg" alt="">
+              <p>风是透明的河流，雨是冰凉的流星¥娟的文字，好有灵性!</p>
+            </li>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>
