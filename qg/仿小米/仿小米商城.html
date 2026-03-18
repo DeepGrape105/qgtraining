@@ -45,13 +45,13 @@
       <div class="under">
         <div class="left"><img src="./mi-img/header-top-mi.webp" alt=""></div>
         <div class="main">
-          <li>Xiaomi手机</li>
-          <li>REDMI手机</li>
-          <li>电视</li>
-          <li>笔记本</li>
-          <li>平板</li>
-          <li>家电</li>
-          <li>路由器</li>
+          <li data-id="1" class="mimi">Xiaomi手机</li>
+          <li data-id="2" class="mimi">REDMI手机</li>
+          <li data-id="3" class="mimi">电视</li>
+          <li data-id="4" class="mimi">笔记本</li>
+          <li data-id="5" class="mimi">平板</li>
+          <li data-id="6" class="mimi">家电</li>
+          <li data-id="7" class="mimi">路由器</li>
           <li><a href="">服务中心</a></li>
           <li><a href="">社区</a></li>
         </div>
@@ -105,6 +105,12 @@
           <li>智能 路由器<span><i class="iconfont icon-iconfontangleright"></i></li>
           <li>电源 配置<span><i class="iconfont icon-iconfontangleright"></i></li>
         </div>
+        <div class="popout">
+          <div class="popItem">
+            <img src="" alt="">
+            <span></span>
+          </div>
+        </div>
         <div class="container-top-main">
           <div class="toggle">
             <button class="prev"> <i class="iconfont icon-iconfontleft"></i></button>
@@ -145,6 +151,66 @@
       { url: './mi-img/bigbox-5.jpg', backgroundColor: 'rgba(255, 255, 255, .7)' },
       { url: './mi-img/bigbox-6.jpg', backgroundColor: '#A19B97' }
     ]
+
+    const mimiData = [
+      [  // 第1组
+        { img: './mi-img/mimi-1-1.webp', p1: 'Xiaomi 17 Ultra 徕卡版', p2: '7999元起' },
+        { img: './mi-img/mimi-1-2.webp', p1: 'Xiaomi 17 Ultra', p2: '6999元起' },
+        { img: './mi-img/mimi-1-3.webp', p1: 'Xiaomi 17 Pro Max', p2: '5999元起' },
+        { img: './mi-img/mimi-1-4.webp', p1: 'Xiaomi 17 Pro', p2: '4999起' },
+        { img: './mi-img/mimi-1-5.webp', p1: 'Xiaomi 17', p2: '4299起' },
+        { img: './mi-img/mimi-1-6.webp', p1: 'Xiaomi MIX Flip 2', p2: '4999起' }
+      ],
+      [  // 第2组（
+        { img: './mi-img/mimi-2-1.webp', p1: 'REDMI Turbo 5 MAX', p2: '2199起' },
+        { img: './mi-img/mimi-2-2.webp', p1: 'REDMI Turbo 5', p2: '1999起' },
+        { img: './mi-img/mimi-2-3.webp', p1: 'REDMI K90 Pro Max', p2: '3999起' },
+        { img: './mi-img/mimi-2-4.webp', p1: 'REDMI K90', p2: '2599起' },
+        { img: './mi-img/mimi-2-5.webp', p1: 'REDMI Note 15 Pro+', p2: '1799起' },
+        { img: './mi-img/mimi-2-6.webp', p1: 'REDMI Note 15', p2: '1349起' }
+      ],
+      [  // 第3组
+        { img: './mi-img/mimi-3-1.webp', p1: '小米电视S Pro Mini LED 2026', p2: '6499起' },
+        { img: './mi-img/mimi-3-2.webp', p1: '旗舰系列-S Mini LED 2025', p2: '3799起' },
+        { img: './mi-img/mimi-3-3.webp', p1: 'REDMI 电视 X 2026', p2: '2999起' },
+        { img: './mi-img/mimi-3-4.webp', p1: '旗舰系列-S Pro Mini LED', p2: '4999起' },
+        { img: './mi-img/mimi-3-5.webp', p1: '性价比爆款- REDMI A Pro', p2: '1699起' },
+        { img: './mi-img/mimi-3-6.webp', p1: '性价比爆款-REDMI A 2025', p2: '799起' }
+      ],
+      [  // 第4组
+        { img: './mi-img/mimi-4-1.webp', p1: 'REDMI Book 14 锐龙版2025', p2: '3499起' },
+        { img: './mi-img/mimi-4-2.webp', p1: 'REDMI Book Pro 16 2025', p2: '6199起' },
+        { img: './mi-img/mimi-4-3.webp', p1: 'REDMI Book Pro 14 2025', p2: '5899起' },
+        { img: './mi-img/mimi-4-4.webp', p1: 'REDMI Book 14 2025', p2: '3399起' },
+        { img: './mi-img/mimi-4-5.webp', p1: 'REDMI Book 16 2025', p2: '4399起' },
+        { img: './mi-img/mimi-4-6.webp', p1: 'Redmi Book 16 2024', p2: '3999起' }
+      ],
+      [  // 第5组
+        { img: './mi-img/mimi-5-1.webp', p1: 'REDMI Pad 2 Pro', p2: '1799起' },
+        { img: './mi-img/mimi-5-2.webp', p1: 'Xiaor Pad 8 Pro', p2: '2899起' },
+        { img: './mi-img/mimi-5-3.webp', p1: 'Xiaomi Pad 8', p2: '2299起' },
+        { img: './mi-img/mimi-5-4.webp', p1: 'REDMI Pad 2', p2: '1199起' },
+        { img: './mi-img/mimi-5-5.webp', p1: 'REDMI K Pad', p2: '2699起' },
+        { img: './mi-img/mimi-5-6.webp', p1: 'iaomi Pad 7S Pro 12.5', p2: '3099起' }
+      ],
+      [  // 第6组
+        { img: './mi-img/mimi-7-1.webp', p1: '米家冰箱对开636L', p2: '1899元' },
+        { img: './mi-img/mimi-7-2.webp', p1: '巨省电Pro立式3匹超一级能效米家空调', p2: '5299元' },
+        { img: './mi-img/mimi-7-3.webp', p1: '小米空调1.5匹新1级能效', p2: '1899元' },
+        { img: './mi-img/mimi-7-4.webp', p1: '米家三区洗衣机Pro滚筒10kg', p2: '4699元' },
+        { img: './mi-img/mimi-7-5.webp', p1: '米家洗衣机洗烘12kg', p2: '1799元' },
+        { img: './mi-img/mimi-7-6.webp', p1: '米家冰箱Pro微冰鲜双系统十字平嵌560L冰晶白', p2: '6699元' }
+      ],
+      [  // 第7组
+        { img: './mi-img/mimi-7-1.webp', p1: 'Xiaomi路由器AX3000T', p2: '129元' },
+        { img: './mi-img/mimi-7-2.webp', p1: 'Xiaomi全屋路由BE3600Pro套装', p2: '699元' },
+        { img: './mi-img/mimi-7-3.webp', p1: '小米空调1.Xiaomi路由器BE3600', p2: '59元' },
+        { img: './mi-img/mimi-7-4.webp', p1: 'Xiaomi路由器 BE6500 Pro', p2: '549元' },
+        { img: './mi-img/mimi-7-5.webp', p1: 'Xiaomi路由器 BE5000', p2: '279元' },
+        { img: './mi-img/mimi-7-6.webp', p1: '米家冰箱Pro微冰鲜双系统十字平嵌560L冰晶白', p2: '小米路由器' }
+      ]
+    ]
+    const searchinputDate = ['洗衣机', '手机', '电视', '平板', '笔记本', '路由器', '空调', '手环', '充电宝']
     const num = 6
     let i = 0
     //获取
@@ -199,6 +265,39 @@
     img.addEventListener('mouseleave', function () {
       open()
     })
+    //上边栏滑出
+    const mimi = document.querySelectorAll('.mimi')
+    const hid = document.querySelector('.hid')
+    const miImg = document.querySelectorAll('.hid .content .top img')
+    const miP1 = document.querySelectorAll('.hid .p p')
+    const miP2 = document.querySelectorAll('.hid .price p')
+    for (let i = 0; i < mimi.length; i++) {
+      mimi[i].addEventListener('mouseenter', function () {
+        for (let j = 0; j < 6; j++) {
+          miImg[j].src = mimiData[i][j].img
+          miP1[j].innerHTML = mimiData[i][j].p1
+          miP2[j].innerHTML = mimiData[i][j].p2
+        }
+        hid.classList.add('move')
+      })
+      mimi[i].addEventListener('mouseleave', function () {
+        hid.classList.remove('move')
+      })
+    }
+    //搜索框的文字切换
+    let searchId = 0
+    const searchinput = document.querySelector('.header .under input')
+    let a1 = setInterval(function () {
+      if (searchId === searchinputDate.length) {
+        searchId = 0
+      }
+      searchinput.placeholder = searchinputDate[searchId]
+      searchId++
+    }, 2000)
+    //侧边栏弹出
+    const popDate = [
+
+    ]
   </script>
 </body>
 

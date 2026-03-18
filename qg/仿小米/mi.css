@@ -10,7 +10,10 @@
    }
 
    .header {
+     position: relative;
      height: 140px;
+     z-index: 5;
+     background: #FFFFFF;
    }
 
    .w {
@@ -70,6 +73,8 @@
    }
 
    .container-under {
+     transform-style: preserve-3d;
+     perspective: 250px;
      height: 200px;
      width: 100%;
      margin-top: 10px;
@@ -96,6 +101,7 @@
    }
 
    .icon-iconfontanglerigh {
+     font-weight: 700;
      font-size: 14px;
      color: #FFFFFF;
    }
@@ -166,6 +172,12 @@
      height: 100%;
      width: 319px;
      margin-left: 9px;
+     transition: all .3s;
+   }
+
+   .container-under img:hover {
+     transform: translateZ(1px);
+     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
    }
 
    .header .top .left {
@@ -382,7 +394,6 @@
    }
 
    .hid {
-     display: none;
      position: absolute;
      top: 0;
      height: 240px;
@@ -392,12 +403,13 @@
      border-top: 1px solid #9E9FA2;
      z-index: 3;
      background: #FFFFFF;
+     transition: all .3s ease;
+     transform: translateY(-240px);
    }
 
    .content {
      width: 1226px;
      height: 100%;
-     background: pink;
      margin-left: 500px;
    }
 
@@ -408,38 +420,30 @@
    }
 
    .hid .top li {
-     background: green;
      flex: 1;
      margin-top: 30px;
-     border-right: 1px red solid;
+     border-right: 1px #E0E0E0 solid;
    }
 
    .hid .p,
    .hid .price {
      display: flex;
-     height: 18px;
      width: 1226px;
-     font-size: 18px;
+     font-size: 12px;
      text-align: center;
    }
 
    .hid p {
-     display: inline;
+     flex: 1;
    }
 
    .hid .p {
      margin-top: 20px;
-     background: yellow;
    }
 
    .hid .price {
      margin-top: 10px;
-     background: green;
-   }
-
-   .hid .p p,
-   .hid .price p {
-     height: 18px;
+     color: #FF6700;
    }
 
    .hid .top li:last-child {
@@ -449,5 +453,23 @@
    .hid .top li img {
      max-height: 100px;
      max-width: 170px;
-     margin: auto auto
+     margin: 5px 0 8px 25px
+   }
+
+   .move {
+     transform: translateY(0);
+   }
+
+   .popout {
+     position: absolute;
+     left: 240px;
+     top: 0;
+     padding: 2px 1px;
+     height: 100%;
+     max-width: 986px;
+   }
+
+   .popItem {
+     height: 76px;
+     width: 246px;
    }
