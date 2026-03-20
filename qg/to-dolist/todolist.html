@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>todolist - Centered Version</title>
+  <link rel="stylesheet" href="./todolist.css">
+  <link rel="stylesheet" href="./font_bzyjqjp8285/iconfont.css">
+</head>
+
+<body>
+
+  <div class="container">
+    <div class="main">
+      <div class="inputer">
+        <input type="text" placeholder="新增代办事项">
+        <div class="tijiao">提交</div>
+      </div>
+      <div class="redo">
+        <div class="header">
+          <div class="pickAll"><input type="checkbox" class="checkAll"><span>全部标为完成</span></div>
+          <div class="time"><i class="iconfont icon-shizhong"></i><span></span></div>
+          <div class="surplus"><i class="iconfont icon-yingjiyanliantixing"></i><span>还有(0)项未完成</span></div>
+        </div>
+        <ul class="willDO">
+        </ul>
+      </div>
+    </div>
+    <ul class="slider">
+      <li class="openTrash">打开回收站</li>
+      <li class="delAll">清空待办清单</li>
+    </ul>
+    <ul class="trashBox">
+    </ul>
+  </div>
+  <script>
+    const tx = document.querySelector('.inputer input')
+    const willDO = document.querySelector('.willDO')
+    const w = document.querySelector('.w')
+    //按下回车添加到下面
+    tx.addEventListener('keyup', function (e) {
+      //阻止默认行为
+      e.preventDefault()
+      if (e.key === 'Enter') {
+        //防止按下输出时文本域内容为空
+        if (tx.value.trim() !== '') {
+          upDate(tx.value, false)
+        }
+        //清除文本域内容
+        tx.value = ''
+      }
+    })
+    //按提交添加到下面
+    const tijiao = document.querySelector('.tijiao')
+    tijiao.addEventListener('click', function () {
+      //防止按下输出时文本域内容为空
+      if (tx.value.trim() !== '') {
+        upDate(tx.value, false)
+      }
+      //清除文本域内容
+      tx.value = ''
+    })
+    function upDate(text, done) {
+      const newThing = document.createElement('li')
+      newThing.innerHTML = `
+           <input type="checkbox" class="finish">
+            <i class="i1"></i>
+            <span class="tx" title="${text}">${text}</span>
+            <i class="i2"></i>
+          `
+      newThing.children[0].checked = done
+      willDO.insertBefore(newThing, willDO.children[0])
+      updateCount()
+      //获取当前元素的复选框和文字，这样每个复选框都有事件了
+      const ck = newThing.querySelector('.finish')
+      const del = newThing.querySelector('.i2')
+      const span = newThing.querySelector('.tx')
+      //给复选框添加事件
+      ck.addEventListener('click', function () {
+        if (this.checked === true) {
+          span.classList.add('active')
+        } else {
+          span.classList.remove('active')
+        }
+        updateCount()
+      })
+      //给删除按钮添加事件
+      del.addEventListener('click', function () {
+        const taskText = span.innerHTML
+        const trashLi = document.createElement('li')
+        trashLi.innerHTML = `
+        <span class="tx" title="${taskText}">${taskText}</span>
+        <button class="restore" >还原</button>
+        <button class="delForever">彻底删除</button>
+       `
+        document.querySelector('.trashBox').insertBefore(trashLi, document.querySelector('.trashBox').children[0])
+        newThing.remove()
+        updateCount()
+        saveData()
+      })
+      //双击文字进行编辑操作
+      span.addEventListener('dblclick', function () {
+        //原来的文字先隐藏换成文本框
+        this.style.display = 'none'
+        //创建临时文本框
+        const input = document.createElement('input')
+        input.focus()
+        this.after(input)
+        //设置input属性值、
+        input.classList.add('temp')
+        input.type = 'text'
+        input.value = this.innerHTML
+        span.title = input.value
+        //失去焦点时更新内容
+        input.addEventListener('blur', function () {
+          //如果删到没有东西就直接从行列中删除
+          if (input.value === '') {
+            newThing.remove()
+          } else {
+            span.innerHTML = input.value
+            span.style.display = 'inline'
+          }
+          this.remove()
+        })
+        //按下enter结束输入
+        input.addEventListener('keyup', function (e) {
+          if (e.key === 'Enter') {
+            //如果删到没有东西就直接从行列中删除
+            if (input.value === '') {
+              newThing.remove()
+            } else {
+              span.innerHTML = input.value
+              span.style.display = 'inline'
+            }
+            this.remove()
+          }
+        })
+        updateCount()
+        saveData()
+      })
+    }
+    //更新未完成数量
+    function updateCount() {
+      const total = willDO.querySelectorAll('li').length
+      const done = willDO.querySelectorAll('.finish:checked').length
+      const surplus = document.querySelector('.surplus span')
+      surplus.innerHTML = `<i></i>还有(${total - done})项未完成`
+      if (total > 0) {
+        checkAll.checked = total === done ? true : false
+      }
+    }
+    const checkAll = document.querySelector('.checkAll')
+    const time = document.querySelector('.time span')
+    //实时时间更新
+    let n = setInterval(function () {
+      const date = new Date()
+      time.innerText = date.toLocaleString()
+    }, 1000)
+    //给大复选框添加事件
+    checkAll.addEventListener('click', function () {
+      //获取大复选框checked为true或false
+      //给所有小复选框赋相应的值
+      const tds = document.querySelectorAll('.finish')
+      for (let i = 0; i < tds.length; i++) {
+        tds[i].checked = checkAll.checked
+        const spann = tds[i].parentElement.querySelector('.tx')
+        if (checkAll.checked === true) {
+          spann.classList.add('active')
+        } else {
+          spann.classList.remove('active')
+        }
+      }
+      updateCount()
+    })
+    function saveData() {
+      const todoList = []
+      willDO.querySelectorAll('li').forEach(li => {
+        todoList.push({ text: li.querySelector('.tx').innerText, done: li.querySelector('.finish').checked })
+      })
+      const trashList = []
+      document.querySelector('.trashBox').querySelectorAll('li').forEach(li => {
+        trashList.push({ text: li.querySelector('.tx').innerText })
+      })
+      localStorage.setItem('todoData', JSON.stringify(todoList))
+      localStorage.setItem('trashData', JSON.stringify(trashList))
+    }
+    //给回收站添加事件委托
+    const trashBox = document.querySelector('.trashBox')
+    trashBox.addEventListener('click', function (e) {
+      if (e.target.className === 'restore') {
+        upDate(e.target.parentElement.querySelector('.tx').innerText, false)
+        e.target.parentElement.remove()
+      } else if (e.target.className === 'delForever') {
+        e.target.parentElement.remove()
+      }
+      saveData()
+      updateCount()
+    })
+    function loadData() {
+      //加载左边的数据
+      const data = localStorage.getItem('todoData')
+      if (data) {
+        const items = JSON.parse(data)
+        items.reverse().forEach(item => {
+          upDate(item.text, item.done)
+        })
+        updateCount()
+      }
+      //加载回收站数据
+      const tData = localStorage.getItem('trashData')
+      if (tData) {
+        const tItems = JSON.parse(tData)
+        tItems.reverse().forEach(item => {
+          const trashLi = document.createElement('li')
+          trashLi.innerHTML = `
+              <span class="tx" title="${item.text}">${item.text}</span>
+              <button class="restore">还原</button>
+              <button class="delForever">彻底删除</button>
+            `
+          trashBox.insertBefore(trashLi, trashBox.children[0])
+        })
+      }
+    }
+    //清除所有代办清单
+    const delAll = document.querySelector('.delAll')
+    delAll.addEventListener('click', function () {
+      const lis = document.querySelectorAll('.willDO li')
+      if (lis.length > 0) {
+        lis.forEach(item => {
+          const taskText = item.querySelector('.tx').innerHTML
+          const trashLi = document.createElement('li')
+          trashLi.innerHTML = `
+        <span class="tx" title="${taskText}">${taskText}</span>
+        <button class="restore" >还原</button>
+        <button class="delForever">彻底删除</button>
+       `
+          trashBox.insertBefore(trashLi, trashBox.children[0])
+          item.remove()
+        })
+        updateCount()
+        saveData()
+      }
+    })
+    //打开回收站
+    const openTrash = document.querySelector('.openTrash')
+    const trashContainer = document.querySelector('.trashBox')
+    openTrash.addEventListener('click', function () {
+      trashContainer.classList.toggle('move')
+      if (trashContainer.classList.contains('move')) {
+        openTrash.innerHTML = '关闭回收站';
+      } else {
+        openTrash.innerHTML = '打开回收站'
+      }
+    })
+    loadData() 
+  </script>
+</body>
+
+</html>

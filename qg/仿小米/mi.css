@@ -21,6 +21,7 @@
      font-family: "Helvetica Neue", Helvetica, Arial, "Microsoft YaHei", sans-serif;
      background: #FFFFFF;
      min-width: 1226px;
+     height: 850px;
    }
 
    .header .top {
@@ -41,6 +42,7 @@
 
    .container {
      position: relative;
+     overflow: hidden;
      margin: 0 auto;
      width: 1226px;
      height: 670px;
@@ -64,6 +66,7 @@
      background: #9E9FA2;
      line-height: 41px;
      cursor: pointer;
+     z-index: 5;
    }
 
    .container-top-main {
@@ -461,15 +464,206 @@
    }
 
    .popout {
+     display: flex;
+     flex-direction: column;
+     flex-wrap: wrap;
+     align-content: flex-start;
      position: absolute;
      left: 240px;
      top: 0;
      padding: 2px 1px;
-     height: 100%;
-     max-width: 986px;
+     height: 460px;
+     width: auto;
+     background: #FFFFFF;
+     opacity: 0;
+     transition: transform 0.3s ease;
+     z-index: 10;
    }
 
    .popItem {
      height: 76px;
      width: 246px;
+   }
+
+   .popItem img {
+     float: left;
+     margin-top: 16px;
+     margin-left: 30px;
+     margin-right: 15px;
+     width: 40px;
+     height: 40px;
+   }
+
+   .popItem span {
+     line-height: 76px;
+     font-size: 14px;
+     color: #333333;
+   }
+
+   .pop {
+     opacity: 1;
+   }
+
+   .w2 {
+     display: flex;
+     flex-direction: column;
+     gap: 10px;
+     position: relative;
+     perspective: 250px;
+     transform-style: preserve-3d;
+     font-family: "Helvetica Neue", Helvetica, Arial, "Microsoft YaHei", sans-serif;
+     height: 5000px;
+     background: #F5F5F5;
+   }
+
+   .ad {
+     height: 120px;
+     width: 1226px;
+     margin: 0 auto;
+     transform: translateY(30px);
+   }
+
+   .ad img {
+     height: 120px;
+   }
+
+   .iphone,
+   .wear,
+   .pad,
+   .tv,
+   .life {
+     display: grid;
+     gap: 14px;
+     height: 614px;
+     width: 1226px;
+     margin: 0 auto;
+   }
+
+   .iphone,
+   .wear,
+   .pad,
+   .tv,
+   .life {
+     grid-template-columns: repeat(5, 1fr);
+     grid-template-rows: repeat(2, 1fr);
+   }
+
+
+   .iphone li:first-child,
+   .wear li:first-child,
+   .pad li:first-child,
+   .tv li:first-child,
+   .life li:first-child {
+     grid-row: 1 / span 2;
+   }
+
+   .wear li:last-child,
+   .pad li:last-child,
+   .tv li:last-child,
+   .life li:last-child {
+     display: grid;
+     grid-template-rows: 1fr 1fr;
+     grid-template-columns: 1fr;
+     gap: 14px;
+   }
+
+   .wear li div,
+   .pad li div,
+   .tv li div,
+   .life li div {
+     background: pink;
+   }
+
+   .w2 li:hover {
+     transform: translateZ(1px) translateY(-3px);
+     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+     cursor: pointer;
+   }
+
+   .w2 li {
+     display: flex;
+     flex-direction: column;
+     align-items: center;
+     padding: 20px 0;
+     background: #FFFFFF;
+     transition: all .3s;
+   }
+
+   .iphone img {
+     width: 160px;
+     height: 160px;
+     text-align: center;
+   }
+
+   .iphone li:first-child img {
+     width: 100%;
+     height: 100%;
+   }
+
+
+   .iphone li .p1 {
+     width: 214px;
+     height: 21px;
+     font-size: 14px;
+     color: #333;
+     margin: 25px 10px 4px;
+     text-align: center;
+   }
+
+   .iphone li .p2 {
+     width: 214px;
+     height: 19px;
+     margin: 0 10px 10px;
+     white-space: nowrap;
+     overflow: hidden;
+     text-overflow: ellipsis;
+     color: #b0b0b0;
+     font-size: 12px;
+   }
+
+   .iphone li .p3 .span1 {
+     display: inline-block;
+     color: #FF6700;
+     font-size: 14px;
+     margin-right: 8px;
+   }
+
+   .iphone li .p3 .span2 {
+     display: inline-block;
+     color: #b0b0b0;
+     font-size: 14px;
+     text-decoration: line-through;
+   }
+
+   .w2 .W2Nav .left {
+     float: left;
+   }
+
+   .w2 .W2Nav .right {
+     float: right;
+     font-size: 18px;
+     cursor: pointer;
+     transition: a1l 5s;
+   }
+
+   .icon-youjiantou {
+     color: #b0b0b0;
+     margin-left: 6px;
+   }
+
+   .w2 .W2Nav .right:hover i {
+     color: #FF6700;
+   }
+
+   .w2 .W2Nav .right:hover {
+     color: #FF6700;
+   }
+
+   .W2Nav {
+     margin: 30px auto 0;
+     width: 1226px;
+     height: 50px;
+     line-height: 60px;
+     font-size: 24px;
+     color: #333;
    }

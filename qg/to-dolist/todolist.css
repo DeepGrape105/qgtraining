@@ -1,0 +1,349 @@
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    /* 这段body借助了ai查询怎样让页面不可以缩小 */
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background-image: url('./todo/bg2.jpg');
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+      font-family: Arial, sans-serif;
+      background-color: #F0F2F5;
+    }
+
+    .container {
+      position: relative;
+      display: flex;
+      gap: 50px;
+      margin-left: 180px;
+    }
+
+    .main {
+      width: 1000px;
+      height: 850px;
+      border-radius: 40px;
+      backdrop-filter: blur(15px);
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.6);
+      border: none;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+    }
+
+    .inputer {
+      overflow: hidden;
+      width: 100%;
+      height: 100px;
+      background: #FFFFFF;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      border: 1px solid #DCDFE6;
+      font-size: 30px;
+      color: #3a3737;
+      cursor: pointer;
+    }
+
+    .inputer input {
+      padding: 20px;
+      width: 686px;
+      height: 100%;
+      border: none;
+      outline: none;
+      font-size: 24px;
+    }
+
+    .inputer .tijiao {
+      float: right;
+      width: 260px;
+      height: 100%;
+      background: #4A90E2;
+      text-align: center;
+      line-height: 98px;
+      color: #FFFFFF;
+    }
+
+    .redo {
+      width: 100%;
+      height: 670px;
+      background: rgba(248, 215, 218, 0.3);
+      border-radius: 20px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .header {
+      overflow: hidden;
+      display: flex;
+      position: relative;
+      height: 130px;
+      line-height: 130px;
+      text-align: center;
+      font-size: 27px;
+      background: #F5F7FA;
+      border-radius: 20px;
+    }
+
+    .pickAll {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 300px;
+      background: #EDF2FC;
+      color: #4A90E2;
+    }
+
+    .pickAll .checkAll {
+      display: inline-block;
+      width: 30px;
+      height: 30px;
+      margin-right: 20px;
+      cursor: pointer;
+    }
+
+    .pickAll span {
+      display: inline-block;
+    }
+
+    .time {
+      width: 360px;
+      background: #FFFFFF;
+      color: #909399;
+    }
+
+    .surplus {
+      flex-grow: 1;
+      height: 100%;
+      background: #FFFFFF;
+      color: #909399;
+    }
+
+    .willDO {
+      flex-grow: 1;
+      width: 95%;
+      margin: 20px auto;
+      background: transparent;
+      padding: 15px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #FFB6C1 transparent;
+    }
+
+    li {
+      list-style: none;
+      cursor: pointer;
+    }
+
+    .willDO li {
+      position: relative;
+      display: flex;
+      width: 100%;
+      height: 110px;
+      margin-bottom: 15px;
+      border-radius: 12px;
+      background: #FFFFFF;
+      border: 1px solid #F2F6FC;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
+      transition: transform 0.2s;
+      align-items: center;
+      color: #000;
+      font-size: 22px;
+    }
+
+    .willDO li:hover {
+      transform: scale(1.01);
+    }
+
+    .willDO li .i1,
+    .willDO .finish {
+      position: absolute;
+      left: 23px;
+      display: inline-block;
+      width: 80px;
+      height: 80px;
+      line-height: 80px;
+      text-align: center;
+    }
+
+    .willDO .finish {
+      opacity: 0;
+      z-index: 2;
+    }
+
+    .willDO li .i1::before {
+      content: "\f0129";
+      font-family: "iconfont";
+      font-size: 52px;
+      color: #ddd;
+      font-style: normal;
+    }
+
+    .willDO li .i1:hover {
+      color: #6ccef5;
+      transform: scale(1.1);
+    }
+
+    .finish:checked+i::before {
+      content: "\e609";
+      font-style: normal;
+    }
+
+    .willDO .tx {
+      margin-left: 110px;
+      background: transparent;
+      color: #303133;
+      height: 100%;
+      width: 640px;
+      padding-left: 10px;
+      padding-right: 10px;
+      line-height: 110px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    .willDO li .temp {
+      display: inline-block;
+      margin-left: 110px;
+      background: #f8f9fa;
+      height: 60px;
+      width: 600px;
+      padding: 0 10px;
+      line-height: 110px;
+      font-size: 24px;
+      border-radius: 4px;
+      outline: none;
+    }
+
+    .willDO li .i2 {
+      position: absolute;
+      right: 23px;
+      display: inline-block;
+      width: 70px;
+      height: 70px;
+      line-height: 70px;
+      text-align: center;
+      font-family: "iconfont";
+    }
+
+    .willDO li .i2:hover {
+      color: #f56c6c;
+      transform: scale(1.1);
+    }
+
+    .willDO li .i2::before {
+      content: "\e64f";
+      font-style: normal;
+      font-size: 52px;
+    }
+
+    .finish:checked {
+      color: #ccc;
+      text-decoration: line-through;
+      transition: 0.5 all;
+    }
+
+    .active {
+      color: #ccc !important;
+      text-decoration: line-through !important;
+      transition: 0.5 all;
+    }
+
+    .slider {
+      overflow: hidden;
+      transform: translateY(-300px);
+      display: flex;
+      flex-direction: column;
+      width: 290px;
+      height: 220px;
+      border: 10px solid rgb(160, 155, 156);
+      border-radius: 40px;
+      background: white;
+      align-self: center;
+    }
+
+    .slider li {
+      width: 100%;
+      height: 100px;
+      text-align: center;
+      line-height: 100px;
+      background: #aaacb0;
+      color: #fff;
+      font-size: 24px;
+      cursor: pointer;
+    }
+
+    .slider li:first-child {
+      background: #DFE3DD;
+      color: #fff;
+    }
+
+    .trashBox {
+      overflow: hidden;
+      width: 480px;
+      margin-right: -480px;
+      height: 850px;
+      background: rgb(241, 238, 238);
+      border-radius: 20px;
+      opacity: 0;
+      transition: all .6s;
+    }
+
+    .trashBox li {
+      overflow: hidden;
+      width: 90%;
+      height: 80px;
+      margin: 20px auto;
+      background: #EBEEF5;
+      line-height: 80px;
+      border-radius: 6px;
+    }
+
+    .trashBox .tx {
+      float: left;
+      padding: 0 10px;
+      width: 268px;
+      height: 100%;
+      font-size: 22px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .restore,
+    .delForever {
+      height: 50%;
+      width: 70px;
+      border: none;
+      font-size: 16px;
+      border-radius: 6px;
+      color: #FFFFFF;
+    }
+
+    .restore {
+      margin-right: 10px;
+      background: #4A90E2;
+
+    }
+
+    .delForever {
+      background: #AAACB0;
+    }
+
+    .move {
+      opacity: 1;
+      margin-right: -280px;
+    }
+
+    .surplus .icon-yingjiyanliantixing,
+    .time .icon-shizhong {
+      font-size: 26px;
+    }
