@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0 ">
   <title>小米商城</title>
   <link rel="stylesheet" href="./font_7hk7kb7x84q/iconfont.css">
   <link rel="stylesheet" href="./font_9eafhmjb47/iconfont.css">
@@ -468,7 +468,7 @@
         { img: './mi-img/mimi-1-5.webp', p1: 'Xiaomi 17' }
       ]
     ]
-    const num = 6
+    const num = sliderData.length
     let i = 0
     //获取
     const img = document.querySelector('.container-top')
@@ -480,6 +480,9 @@
     let n = 0
     open()
     function open() {
+      if (n) {
+        clearInterval(n)
+      }
       n = setInterval(function () {
         if (i === num) {
           i = -1
@@ -493,26 +496,24 @@
       }, 3000)
     }
     prev.addEventListener('click', function () {
-      clearInterval(n)
-      img.style.backgroundImage = `url('${sliderData[i].url}')`
-      slider.style.backgroundColor = sliderData[i].backgroundColor
-      document.querySelector('span.active').classList.remove('active')
-      indicator[i].classList.add('active')
       i--
       if (i < 0) {
         i = num - 1
       }
-    })
-    next.addEventListener('click', function () {
-      clearInterval(n)
       img.style.backgroundImage = `url('${sliderData[i].url}')`
       slider.style.backgroundColor = sliderData[i].backgroundColor
       document.querySelector('span.active').classList.remove('active')
       indicator[i].classList.add('active')
+    })
+    next.addEventListener('click', function () {
       i++
-      if (i === num) {
+      if (i >= num) {
         i = 0
       }
+      img.style.backgroundImage = `url('${sliderData[i].url}')`
+      slider.style.backgroundColor = sliderData[i].backgroundColor
+      document.querySelector('span.active').classList.remove('active')
+      indicator[i].classList.add('active')
     })
     img.addEventListener('mouseenter', function () {
       clearInterval(n)
@@ -520,6 +521,7 @@
     img.addEventListener('mouseleave', function () {
       open()
     })
+    open()
     //上边栏滑出
     const mimi = document.querySelectorAll('.mimi')
     const hid = document.querySelector('.hid')

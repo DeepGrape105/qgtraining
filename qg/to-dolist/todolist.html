@@ -30,8 +30,13 @@
     <ul class="slider">
       <li class="openTrash">打开回收站</li>
       <li class="delAll">清空待办清单</li>
+      <li class="search">查询代办事项</li>
     </ul>
     <ul class="trashBox">
+    </ul>
+    </ul>
+    <ul class="searchBox">
+      <div class="top"></div>
     </ul>
   </div>
   <script>
@@ -61,13 +66,15 @@
       //清除文本域内容
       tx.value = ''
     })
-    function upDate(text, done) {
+    function upDate(text, done, time) {
       const newThing = document.createElement('li')
+      const createTime = time || new Date().toLocaleString();
       newThing.innerHTML = `
            <input type="checkbox" class="finish">
             <i class="i1"></i>
             <span class="tx" title="${text}">${text}</span>
             <i class="i2"></i>
+            <p class="now">${createTime}</p>
           `
       newThing.children[0].checked = done
       willDO.insertBefore(newThing, willDO.children[0])
@@ -149,6 +156,11 @@
       if (total > 0) {
         checkAll.checked = total === done ? true : false
       }
+      if (done > 0 && total === done) {
+        document.body.style.backgroundImage = "url('./todo/bg4.jpg')"
+      } else {
+        document.body.style.backgroundImage = "url('./todo/bg2.jpg')"
+      }
     }
     const checkAll = document.querySelector('.checkAll')
     const time = document.querySelector('.time span')
@@ -176,7 +188,11 @@
     function saveData() {
       const todoList = []
       willDO.querySelectorAll('li').forEach(li => {
-        todoList.push({ text: li.querySelector('.tx').innerText, done: li.querySelector('.finish').checked })
+        todoList.push({
+          text: li.querySelector('.tx').innerText,
+          done: li.querySelector('.finish').checked,
+          time: li.querySelector('.now').innerText.replace('1')
+        })
       })
       const trashList = []
       document.querySelector('.trashBox').querySelectorAll('li').forEach(li => {
@@ -188,10 +204,10 @@
     //给回收站添加事件委托
     const trashBox = document.querySelector('.trashBox')
     trashBox.addEventListener('click', function (e) {
-      if (e.target.className === 'restore') {
+      if (e.target.classList.contains('restore')) {
         upDate(e.target.parentElement.querySelector('.tx').innerText, false)
         e.target.parentElement.remove()
-      } else if (e.target.className === 'delForever') {
+      } else if (e.target.classList.contains('delForever')) {
         e.target.parentElement.remove()
       }
       saveData()
@@ -203,7 +219,7 @@
       if (data) {
         const items = JSON.parse(data)
         items.reverse().forEach(item => {
-          upDate(item.text, item.done)
+          upDate(item.text, item.done, item.time)
         })
         updateCount()
       }

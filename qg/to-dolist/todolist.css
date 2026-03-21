@@ -245,6 +245,14 @@
       font-size: 52px;
     }
 
+    .willDO li p {
+      position: absolute;
+      right: 110px;
+      bottom: 10px;
+      font-size: 20px;
+      color: #ccc;
+    }
+
     .finish:checked {
       color: #ccc;
       text-decoration: line-through;
@@ -259,11 +267,11 @@
 
     .slider {
       overflow: hidden;
-      transform: translateY(-300px);
+      transform: translateY(-250px);
       display: flex;
       flex-direction: column;
       width: 290px;
-      height: 220px;
+      height: 320px;
       border: 10px solid rgb(160, 155, 156);
       border-radius: 40px;
       background: white;
@@ -281,9 +289,17 @@
       cursor: pointer;
     }
 
+    .slider li:hover {
+      font-size: 26px;
+      color: #f5d77c;
+    }
+
     .slider li:first-child {
       background: #DFE3DD;
-      color: #fff;
+    }
+
+    .slider li:last-child {
+      background: #ada9a9;
     }
 
     .trashBox {
@@ -297,7 +313,28 @@
       transition: all .6s;
     }
 
+    .searchBox {
+      overflow: hidden;
+      width: 480px;
+      margin-right: -480px;
+      height: 850px;
+      background: rgb(246, 235, 235);
+      border-radius: 20px;
+      opacity: 0;
+      transition: all .6s;
+    }
+
     .trashBox li {
+      overflow: hidden;
+      width: 90%;
+      height: 80px;
+      margin: 20px auto;
+      background: #EBEEF5;
+      line-height: 80px;
+      border-radius: 6px;
+    }
+
+    .searchBox li {
       overflow: hidden;
       width: 90%;
       height: 80px;
@@ -341,6 +378,7 @@
     .move {
       opacity: 1;
       margin-right: -280px;
+      z-index: 10;
     }
 
     .surplus .icon-yingjiyanliantixing,
