@@ -408,6 +408,7 @@
    background: #FFFFFF;
    transition: all .3s ease;
    transform: translateY(-240px);
+   cursor: pointer;
  }
 
  .content {
@@ -420,6 +421,7 @@
    width: 100%;
    height: 130px;
    display: flex;
+
  }
 
  .hid .top li {

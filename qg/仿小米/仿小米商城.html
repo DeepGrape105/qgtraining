@@ -541,6 +541,12 @@
         hid.classList.remove('move')
       })
     }
+    hid.addEventListener('mouseenter', function () {
+      hid.classList.add('move')
+    })
+    hid.addEventListener('mouseleave', function () {
+      hid.classList.remove('move')
+    })
     //搜索框的文字切换
     let searchId = 0
     const searchinput = document.querySelector('.header .under input')
