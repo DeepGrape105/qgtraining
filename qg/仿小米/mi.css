@@ -295,6 +295,15 @@
    border-left: 1px #ccc solid;
    text-align: center;
    font-weight: 700;
+   transition: all .6s;
+ }
+
+ .header .under .right span:hover {
+   background: #FF6700;
+ }
+
+ .header .under .right span:hover .icon-sousuo {
+   color: #FFFFFF;
  }
 
  .icon-sousuo {
@@ -408,6 +417,7 @@
    background: #FFFFFF;
    transition: all .3s ease;
    transform: translateY(-240px);
+   cursor: pointer;
  }
 
  .content {
@@ -420,6 +430,7 @@
    width: 100%;
    height: 130px;
    display: flex;
+
  }
 
  .hid .top li {
@@ -589,19 +600,22 @@
    transition: all .3s;
  }
 
- .iphone img {
+ .iphone img,
+ .pad img {
    width: 160px;
    height: 160px;
    text-align: center;
  }
 
- .iphone li:first-child img {
+ .iphone li:first-child img,
+ .pad li:first-child img {
    width: 100%;
    height: 100%;
  }
 
 
- .iphone li .p1 {
+ .iphone li .p1,
+ .pad li .p1 {
    width: 214px;
    height: 21px;
    font-size: 14px;
@@ -610,10 +624,12 @@
    text-align: center;
  }
 
- .iphone li .p2 {
+ .iphone li .p2,
+ .pad li .p2 {
    width: 214px;
    height: 19px;
    margin: 0 10px 10px;
+   padding: 5px;
    white-space: nowrap;
    overflow: hidden;
    text-overflow: ellipsis;
@@ -621,29 +637,51 @@
    font-size: 12px;
  }
 
- .iphone li .p3 .span1 {
+ .iphone li .p3 .span1,
+ .pad li .p3 .span1 {
    display: inline-block;
    color: #FF6700;
    font-size: 14px;
    margin-right: 8px;
  }
 
- .iphone li .p3 .span2 {
+ .iphone li .p3 .span2,
+ .pad li .p3 .span2 {
    display: inline-block;
    color: #b0b0b0;
    font-size: 14px;
    text-decoration: line-through;
  }
 
- .w2 .W2Nav .left {
+ .w2 .W2Nav .left,
+ .w2 .wearNav .left {
    float: left;
+   font-weight: 200;
  }
 
  .w2 .W2Nav .right {
    float: right;
+   font-weight: 300;
    font-size: 18px;
    cursor: pointer;
    transition: a1l 5s;
+ }
+
+ .w2 .wearNav .right {
+   float: right;
+   height: 45px;
+   border-bottom: #FF6700 2px solid;
+   font-weight: 300;
+   font-size: 18px;
+   color: #FF6700;
+   cursor: pointer;
+ }
+
+ .w2 .wearNav .small img {
+   float: right;
+   display: inline-block;
+   width: 10px;
+   height: 10px;
  }
 
  .icon-youjiantou {
@@ -659,7 +697,8 @@
    color: #FF6700;
  }
 
- .W2Nav {
+ .W2Nav,
+ .wearNav {
    margin: 30px auto 0;
    width: 1226px;
    height: 50px;

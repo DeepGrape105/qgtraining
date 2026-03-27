@@ -186,8 +186,7 @@
         <p class="p3"><span class="span1">4999元起</span></p>
       </li>
     </ul>
-    <div class="W2Nav"><span class="left">手机</span><span class="right">查看更多<i
-          class="iconfont icon-youjiantou"></i></span>
+    <div class="wearNav"><span class="left">笔记本 | 平板</span><span class="right">热门</span>
     </div>
     <ul class="wear">
       <li></li>
@@ -203,21 +202,48 @@
         <div class="1"></div>
       </li>
     </ul>
-    <div class="W2Nav"><span class="left">手机</span><span class="right">查看更多<i
-          class="iconfont icon-youjiantou"></i></span>
+    <div class="wearNav"><span class="left">笔记本 | 平板</span><span class="right">热门</span>
     </div>
     <ul class="pad">
-      <li></li>
-      <li></li>
-      <li></li>
-      <li></li>
-      <li></li>
-      <li></li>
-      <li></li>
-      <li></li>
+      <li><img src="mi-img/pd-1.webp" alt=""></li>
+      <li><img src="mi-img/pd-2.webp" alt="">
+        <p class="p1">REDMI Turbo 5 MAX</p>
+        <p class="p2">天玑9500s | 9000mAh最大小米电池续航牛逼</p>
+        <p class="p3"><span class="span1">2199元起</span><span class="span2">2499元</span></p>
+      </li>
+      <li><img src="mi-img/pd-3.webp" alt="">
+        <p class="p1">REDMI Turbo 5</p>
+        <p class="p2">天玑8500-Ultra | 6.59"黄金尺寸 | 1.5倍超强</p>
+        <p class="p3"><span class="span1">1999元起</span><span class="span2">2299元</span></p>
+      </li>
+      <li><img src="mi-img/pd-4.webp" alt="">
+        <p class="p1">Xiaomi 17 Ultra 徕卡版</p>
+        <p class="p2">全方位徕卡相机体验 | 徕卡2亿像素光感超强</p>
+        <p class="p3"><span class="span1">7999元起</span></p>
+      </li>
+      <li><img src="mi-img/pd-5.webp" alt="">
+        <p class="p1">Xiaomi 17 Ultra</p>
+        <p class="p2">徕卡2亿像素光学变焦 | 卡1英寸光感超强</p>
+        <p class="p3"><span class="span1">6999元起</span></p>
+      </li>
+      <li><img src="mi-img/pd-6.webp" alt="">
+        <p class="p1">REDMI K90 Pro Max</p>
+        <p class="p2">第五代骁龙@8至尊版 | 超级像素护眼安全感满满</p>
+        <p class="p3"><span class="span1">3999元起</span></p>
+      </li>
+      <li><img src="mi-img/pd-7.webp" alt="">
+        <p class="p1">REDMI K90</p>
+        <p class="p2">骁龙@8至尊版 | Sound by Bose 联合生产</p>
+        <p class="p3"><span class="span1">2599元起</span></p>
+      </li>
+      <li><img src="mi-img/pd-8.webp" alt="">
+        <p class="p1">Xiaomi 17 Pro Max</p>
+        <p class="p2">徕卡光影大师移动影像系统 | 徕卡5X好好</p>
+        <p class="p3"><span class="span1">5999元起</span></p>
+      </li>
       <li>
-        <div class="1"></div>
-        <div class="1"></div>
+        <div class="small"></div>
+        <div class="small"></div>
       </li>
     </ul>
     <div class="W2Nav"><span class="left">手机</span><span class="right">查看更多<i
@@ -541,6 +567,12 @@
         hid.classList.remove('move')
       })
     }
+    hid.addEventListener('mouseenter', function () {
+      hid.classList.add('move')
+    })
+    hid.addEventListener('mouseleave', function () {
+      hid.classList.remove('move')
+    })
     //搜索框的文字切换
     let searchId = 0
     const searchinput = document.querySelector('.header .under input')

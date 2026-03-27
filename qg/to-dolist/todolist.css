@@ -10,24 +10,25 @@
       justify-content: center;
       align-items: center;
       min-height: 100vh;
-      background-image: url('./todo/bg2.jpg');
+      background-image: url(./todo/bg2.png);
       background-size: cover;
-      background-position: center;
+      background-position: right top;
       background-attachment: fixed;
       font-family: Arial, sans-serif;
       background-color: #F0F2F5;
+      overflow: hidden;
     }
 
     .container {
       position: relative;
       display: flex;
       gap: 50px;
-      margin-left: 180px;
     }
 
     .main {
-      width: 1000px;
-      height: 850px;
+      width: 95%;
+      max-width: 1200px;
+      height: 950px;
       border-radius: 40px;
       backdrop-filter: blur(15px);
       padding: 20px;
@@ -49,28 +50,57 @@
       cursor: pointer;
     }
 
-    .inputer input {
+    .searchInputer {
+      overflow: hidden;
+      width: 90%;
+      background: #FFFFFF;
+      height: 80%;
+      margin-top: 12px;
+      margin-left: 60px;
+      border-radius: 12px;
+      border: 1px solid #DCDFE6;
+      font-size: 30px;
+      color: #3a3737;
+    }
+
+    .inputer input,
+    .searchInputer input {
       padding: 20px;
-      width: 686px;
+      width: 756px;
       height: 100%;
       border: none;
       outline: none;
       font-size: 24px;
     }
 
-    .inputer .tijiao {
+    .inputer .tijiao,
+    .searchBtn {
       float: right;
-      width: 260px;
+      width: 160px;
       height: 100%;
       background: #4A90E2;
       text-align: center;
       line-height: 98px;
       color: #FFFFFF;
+      cursor: pointer;
+    }
+
+    #rank,
+    #category {
+      float: right;
+      margin: 26px 9px;
+      width: 100px;
+      height: 40px;
+      color: #ccc;
+      border-radius: 40px;
+      font-size: 19px;
+      color: rgb(77, 77, 73);
+      cursor: pointer;
     }
 
     .redo {
       width: 100%;
-      height: 670px;
+      height: 750px;
       background: rgba(248, 215, 218, 0.3);
       border-radius: 20px;
       display: flex;
@@ -94,7 +124,8 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      width: 300px;
+      width: 380px;
+      height: 100%;
       background: #EDF2FC;
       color: #4A90E2;
     }
@@ -113,6 +144,7 @@
 
     .time {
       width: 360px;
+      height: 100%;
       background: #FFFFFF;
       color: #909399;
     }
@@ -125,7 +157,8 @@
     }
 
     .willDO {
-      flex-grow: 1;
+      position: relative;
+      height: 620px;
       width: 95%;
       margin: 20px auto;
       background: transparent;
@@ -137,7 +170,6 @@
 
     li {
       list-style: none;
-      cursor: pointer;
     }
 
     .willDO li {
@@ -169,6 +201,7 @@
       height: 80px;
       line-height: 80px;
       text-align: center;
+      cursor: pointer;
     }
 
     .willDO .finish {
@@ -184,7 +217,7 @@
       font-style: normal;
     }
 
-    .willDO li .i1:hover {
+    .willDO li .i1:hover::after {
       color: #6ccef5;
       transform: scale(1.1);
     }
@@ -198,8 +231,8 @@
       margin-left: 110px;
       background: transparent;
       color: #303133;
-      height: 100%;
-      width: 640px;
+      height: 97%;
+      width: 78%;
       padding-left: 10px;
       padding-right: 10px;
       line-height: 110px;
@@ -214,13 +247,60 @@
       display: inline-block;
       margin-left: 110px;
       background: #f8f9fa;
-      height: 60px;
-      width: 600px;
+      height: 50px;
+      width: 78%;
       padding: 0 10px;
-      line-height: 110px;
+      line-height: 50px;
       font-size: 24px;
       border-radius: 4px;
       outline: none;
+      border: none;
+      color: #f56c6c;
+    }
+
+    .willDO .changeDDL {
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      background: #FFFFFF;
+      left: 40px;
+      z-index: 20;
+    }
+
+    @keyframes shizhong {
+      0% {}
+
+      100% {
+        transform: scale(1.1);
+        color: rgb(235, 121, 121);
+      }
+    }
+
+    .willDO .icon-shizhong {
+      position: absolute;
+      font-size: 60px;
+      animation: shizhong 1s infinite;
+    }
+
+    .changeDDL input {
+      position: absolute;
+      height: 60px;
+      width: 60px;
+      z-index: 20;
+      left: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .changeDDL input::-webkit-calendar-picker-indicator {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      cursor: pointer;
     }
 
     .willDO li .i2 {
@@ -232,6 +312,7 @@
       line-height: 70px;
       text-align: center;
       font-family: "iconfont";
+      cursor: pointer;
     }
 
     .willDO li .i2:hover {
@@ -248,9 +329,97 @@
     .willDO li p {
       position: absolute;
       right: 110px;
-      bottom: 10px;
+      bottom: 6px;
       font-size: 20px;
       color: #ccc;
+    }
+
+    .willDO li .flag,
+    .innerFlag {
+      float: right;
+      position: relative;
+      transform: translate(-19px, -23px);
+      height: 70px;
+      width: 27px;
+      cursor: pointer;
+    }
+
+    .innerFlag {
+      flex: 1;
+      transform: translate(-20px, 0px);
+      transition: all .2s;
+    }
+
+    .innerFlag:hover {
+      margin-top: -7px;
+    }
+
+    .willDO li .lable {
+      position: absolute;
+      top: 2px;
+      right: 160px;
+      width: 75px;
+      height: 30px;
+      border-radius: 30px;
+      background: rgb(212, 93, 113);
+      color: #ffffff;
+      font-size: 20px;
+      line-height: 30px;
+      text-align: center;
+      cursor: pointer;
+    }
+
+    .willDO li .flag div,
+    .willDO li .innerFlag div {
+      position: absolute;
+      left: 3px;
+      bottom: -10px;
+      transform: rotate(180rad);
+      height: 20px;
+      width: 20px;
+      background: #FFFFFF;
+    }
+
+    .changeFlag {
+      position: absolute;
+      gap: 11px;
+      justify-content: space-evenly;
+      right: 139px;
+      width: 150px;
+      height: 70px;
+      transform: translateY(-23px);
+      cursor: pointer;
+      transition: all .5s;
+    }
+
+    .changeLable {
+      position: absolute;
+      display: flex;
+      gap: 5px;
+      flex-direction: column;
+      top: 3px;
+      right: 235px;
+      width: 75px;
+      height: 110px;
+      text-align: center;
+      color: #FFFFFF;
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    .innerLable {
+      flex: 1;
+      width: 100%;
+      height: 40px;
+      border-radius: 40px;
+      background: #b3b0b0;
+      transition: all .5s;
+    }
+
+    .innerLable:hover {
+      transform: translateX(-10px);
+      background: #bbd4ea;
+      font-size: 20px;
     }
 
     .finish:checked {
@@ -265,14 +434,31 @@
       transition: 0.5 all;
     }
 
+    #just1,
+    #just2 {
+      height: 40px;
+      width: 115px;
+      margin-top: 10px;
+      margin-left: 10px;
+      border-radius: 30px;
+      border: 4px solid rgb(247, 227, 221);
+      font-size: 17px;
+      padding: 7px;
+      cursor: pointer;
+    }
+
+    #just2 {
+      width: 180px;
+    }
+
     .slider {
       overflow: hidden;
-      transform: translateY(-250px);
+      transform: translateY(-213px);
       display: flex;
       flex-direction: column;
       width: 290px;
-      height: 320px;
-      border: 10px solid rgb(160, 155, 156);
+      height: 520px;
+      border: 10px solid rgb(230, 232, 238);
       border-radius: 40px;
       background: white;
       align-self: center;
@@ -283,15 +469,16 @@
       height: 100px;
       text-align: center;
       line-height: 100px;
-      background: #aaacb0;
       color: #fff;
       font-size: 24px;
       cursor: pointer;
     }
 
     .slider li:hover {
-      font-size: 26px;
-      color: #f5d77c;
+      font-size: 28px;
+      color: #f5b97c;
+      border: 6px solid #b7cee7;
+      line-height: 94px;
     }
 
     .slider li:first-child {
@@ -302,26 +489,31 @@
       background: #ada9a9;
     }
 
-    .trashBox {
+    .trashBox,
+    .tipsBox {
       overflow: hidden;
-      width: 480px;
-      margin-right: -480px;
+      width: 500px;
+      margin-right: -550px;
       height: 850px;
-      background: rgb(241, 238, 238);
       border-radius: 20px;
       opacity: 0;
       transition: all .6s;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #d0cbcc transparent;
     }
 
     .searchBox {
       overflow: hidden;
-      width: 480px;
-      margin-right: -480px;
-      height: 850px;
-      background: rgb(246, 235, 235);
-      border-radius: 20px;
+      position: absolute;
       opacity: 0;
-      transition: all .6s;
+      width: 1400px;
+      height: 130px;
+      right: 520px;
+      top: -150px;
+      border-radius: 130px;
+      backdrop-filter: blur(15px);
+      transition: all .7s;
     }
 
     .trashBox li {
@@ -329,17 +521,7 @@
       width: 90%;
       height: 80px;
       margin: 20px auto;
-      background: #EBEEF5;
-      line-height: 80px;
-      border-radius: 6px;
-    }
-
-    .searchBox li {
-      overflow: hidden;
-      width: 90%;
-      height: 80px;
-      margin: 20px auto;
-      background: #EBEEF5;
+      background: rgba(216, 216, 219, 0.8);
       line-height: 80px;
       border-radius: 6px;
     }
@@ -355,6 +537,15 @@
       text-overflow: ellipsis;
     }
 
+    .tipsInner {
+      margin-top: 30px;
+      margin-left: 24px;
+      width: 90%;
+      height: 93%;
+      font-size: 26px;
+      color: #525253;
+    }
+
     .restore,
     .delForever {
       height: 50%;
@@ -363,6 +554,7 @@
       font-size: 16px;
       border-radius: 6px;
       color: #FFFFFF;
+      cursor: pointer;
     }
 
     .restore {

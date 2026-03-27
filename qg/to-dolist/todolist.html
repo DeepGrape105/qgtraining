@@ -2,10 +2,14 @@
 <html lang="en">
 
 <head>
+
   <meta charset="UTF-8">
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>todolist - Centered Version</title>
+  <title>todolist</title>
+
   <link rel="stylesheet" href="./todolist.css">
+
   <link rel="stylesheet" href="./font_bzyjqjp8285/iconfont.css">
 </head>
 
@@ -16,6 +20,18 @@
       <div class="inputer">
         <input type="text" placeholder="新增代办事项">
         <div class="tijiao">提交</div>
+        <select id="rank">
+          <option value="grey">未选择</option>
+          <option value="red">很急</option>
+          <option value="yellow">一般</option>
+          <option value="green">不急</option>
+        </select>
+        <select id="category">
+          <option value="未分类">未分类</option>
+          <option value="work">工作</option>
+          <option value="life">生活</option>
+          <option value="study">学习</option>
+        </select>
       </div>
       <div class="redo">
         <div class="header">
@@ -26,23 +42,51 @@
         <ul class="willDO">
         </ul>
       </div>
+      <select name="just1" id="just1">
+        <option value="all">全部</option>
+        <option value="work">只看工作</option>
+        <option value="life">只看生活</option>
+        <option value="study">只看学习</option>
+      </select>
+      <select name="just2" id="just2">
+        <option value="all">按默认排序</option>
+        <option value="importance">按轻重缓急排序</option>
+      </select>
     </div>
+
     <ul class="slider">
-      <li class="openTrash">打开回收站</li>
-      <li class="delAll">清空待办清单</li>
-      <li class="search">查询代办事项</li>
+      <li class="tips" data-open="使用小贴士" data-close="关闭小贴士" style="background-color: rgba(176, 217, 233, 0.7);">使用小贴士
+      </li>
+      <li class="openTrash" data-open="打开回收站" data-close="关闭回收站" style="background-color: #DFE3DD;">打开回收站</li>
+      <li class="delAll" style="background-color: #ecedac;">清空待办清单</li>
+      <li class="search" data-open="查询代办事项" data-close="关闭查询" style="background-color: #f2dbdb;">查询代办事项</li>
+      <li class="ddl" data-open="设置截至时间" data-close="结束设置" style="background-color: #d1f4dd;">设置截至时间</li>
     </ul>
-    <ul class="trashBox">
+    <div class="tipsBox" style="background-color: rgba(176, 217, 233, 0.7);">
+      <div class="tipsInner">
+        <p>1.颜色标签表示轻重缓急灰<br>灰色：未选择<br>绿色：不急！<br>黄色：有点急！！<br>红色：很急！！！<br>点击颜色标签支持更换颜色，再次点击取消选择</p><br>
+        <p>2.玫红色标签表示分类，可以将待办事项进行分类哦，点击颜色标签支持更换颜色，再次点击取消选择</p><br>
+        <p>3.左下角支持按分类筛选</p><br>
+        <p>4.如果想要按下回车，请确保鼠标在文本框里哦~</p><br>
+        <p>5.如果要关闭某项功能请再次点击哦~</p><br>
+      </div>
+    </div>
+    <ul class="trashBox" style="background-color: rgba(223, 227, 221, 0.7);">
     </ul>
-    </ul>
-    <ul class="searchBox">
-      <div class="top"></div>
+    <ul class="searchBox" style="background-color: rgba(242, 238, 211, 0.7);  ">
+      <div class="searchInputer">
+        <input type="text" placeholder="输入关键字查询">
+        <div class="searchBtn">查询</div>
+      </div>
     </ul>
   </div>
+
   <script>
     const tx = document.querySelector('.inputer input')
     const willDO = document.querySelector('.willDO')
     const w = document.querySelector('.w')
+    const status = document.querySelector('#rank')
+    const category = document.querySelector('#category')
     //按下回车添加到下面
     tx.addEventListener('keyup', function (e) {
       //阻止默认行为
@@ -50,10 +94,13 @@
       if (e.key === 'Enter') {
         //防止按下输出时文本域内容为空
         if (tx.value.trim() !== '') {
-          upDate(tx.value, false)
+          upDate(tx.value, false, null, status.value, category.value)
+          saveData()
         }
         //清除文本域内容
         tx.value = ''
+        status.value = 'grey'
+        category.value = '未分类'
       }
     })
     //按提交添加到下面
@@ -61,28 +108,61 @@
     tijiao.addEventListener('click', function () {
       //防止按下输出时文本域内容为空
       if (tx.value.trim() !== '') {
-        upDate(tx.value, false)
+        upDate(tx.value, false, null, status.value, category.value)
+        saveData()
       }
       //清除文本域内容
       tx.value = ''
+      status.value = 'grey'
+      category.value = '未分类'
     })
-    function upDate(text, done, time) {
+    function upDate(text, done, time, status, category, ddl) {
       const newThing = document.createElement('li')
-      const createTime = time || new Date().toLocaleString();
+      const createTime = time || new Date().toLocaleString()
       newThing.innerHTML = `
-           <input type="checkbox" class="finish">
-            <i class="i1"></i>
-            <span class="tx" title="${text}">${text}</span>
-            <i class="i2"></i>
-            <p class="now">${createTime}</p>
-          `
+       <input type="checkbox" class="finish">
+        <i class="i1"></i>
+        <span class="tx" title="${text}">${text}</span>
+        <i class="i2"></i>
+        <p class="now">${createTime}</p>
+        <div class="changeFlag" style="display: none;">
+          <div class="innerFlag" style="background: red;"><div></div></div>
+          <div class="innerFlag" style="background: yellow;"><div></div></div>
+          <div class="innerFlag" style="background: green;"><div></div></div>
+          <div class="innerFlag" style="background: grey;"><div></div></div>
+          </div>
+        <div class="changeLable" style="display: none;">
+          <div class="innerLable">life</div>
+          <div class="innerLable">study</div>
+          <div class="innerLable">work</div>
+          <div class="innerLable">未分类</div>
+          </div>
+        <div class="lable"></div>
+        <i class="changeDDL iconfont icon-shizhong" style="display: none;"><input type="datetime-local"></i>
+        <div class="flag"><div></div></div>
+        `
       newThing.children[0].checked = done
+      newThing.dataset.time = createTime
+      newThing.dataset.status = status
+      newThing.dataset.category = category
+      newThing.querySelector('.changeDDL input').value = ddl || ''
+      newThing.dataset.ddline = ddl || ''
+      const tempFather = newThing.querySelector('.flag div')
+      const tempLable = newThing.querySelector('.lable')
+      if (just1.value !== 'all' && category !== just1.value) {
+        newThing.style.display = 'none'
+      } else {
+        newThing.style.display = 'flex'
+      }
+      const span = newThing.querySelector('.tx')
       willDO.insertBefore(newThing, willDO.children[0])
+      if (done) span.classList.add('active')
+      if (status) tempFather.parentElement.style.background = status
+      if (category) tempLable.innerHTML = category
       updateCount()
       //获取当前元素的复选框和文字，这样每个复选框都有事件了
       const ck = newThing.querySelector('.finish')
       const del = newThing.querySelector('.i2')
-      const span = newThing.querySelector('.tx')
       //给复选框添加事件
       ck.addEventListener('click', function () {
         if (this.checked === true) {
@@ -92,15 +172,72 @@
         }
         updateCount()
       })
+      //点击时钟设置截至时间
+      const ddline = newThing.querySelector('.changeDDL input')
+      ddline.addEventListener('change', function () {
+        newThing.dataset.ddline = this.value
+        saveData()
+      })
+      //点击小旗子可以更改颜色
+      const flag = newThing.querySelector('.flag')
+      const changeFlag = flag.parentElement.querySelector('.changeFlag')
+      flag.addEventListener('click', function () {
+        if (changeFlag.style.display === 'none') {
+          changeFlag.parentElement.querySelector('.lable').style.display = 'none'
+          changeFlag.parentElement.querySelector('.changeLable').style.display = 'none'
+          changeFlag.style.display = 'flex'
+        } else {
+          changeFlag.parentElement.querySelector('.lable').style.display = 'inline-block'
+          changeFlag.style.display = 'none'
+        }
+      })
+      //点击变色
+      changeFlag.addEventListener('click', function (e) {
+        e.stopPropagation()
+        if (e.target.classList.contains('innerFlag')) {
+          const innerFlag = e.target.closest('.innerFlag')
+          newThing.dataset.status = innerFlag.style.background
+          flag.style.background = innerFlag.style.background
+        }
+        changeFlag.style.display = 'none'
+        changeFlag.parentElement.querySelector('.lable').style.display = 'inline-block'
+        saveData()
+      })
+      //点击标签可以更换分类
+      const lable = newThing.querySelector('.lable')
+      const changeLable = lable.parentElement.querySelector('.changeLable')
+      lable.addEventListener('click', function () {
+        if (changeLable.style.display === 'none') {
+          changeLable.style.display = 'flex'
+        } else {
+          changeLable.style.display = 'none'
+        }
+      })
+      //点击更换标签
+      changeLable.addEventListener('click', function (e) {
+        e.stopPropagation()
+        if (e.target.classList.contains('innerLable')) {
+          const innerLable = e.target.closest('.innerLable')
+          newThing.dataset.category = innerLable.innerHTML
+          lable.innerHTML = innerLable.innerHTML
+        }
+        changeLable.style.display = 'none'
+        saveData()
+      })
       //给删除按钮添加事件
       del.addEventListener('click', function () {
         const taskText = span.innerHTML
         const trashLi = document.createElement('li')
+
+        trashLi.dataset.time = newThing.dataset.time
+        trashLi.dataset.status = newThing.dataset.status
+        trashLi.dataset.category = newThing.dataset.category
+        trashLi.dataset.ddline = newThing.dataset.ddline
         trashLi.innerHTML = `
-        <span class="tx" title="${taskText}">${taskText}</span>
-        <button class="restore" >还原</button>
-        <button class="delForever">彻底删除</button>
-       `
+    <span class="tx" title="${taskText}">${taskText}</span>
+    <button class="restore" >还原</button>
+    <button class="delForever">彻底删除</button>
+   `
         document.querySelector('.trashBox').insertBefore(trashLi, document.querySelector('.trashBox').children[0])
         newThing.remove()
         updateCount()
@@ -112,54 +249,60 @@
         this.style.display = 'none'
         //创建临时文本框
         const input = document.createElement('input')
-        input.focus()
         this.after(input)
         //设置input属性值、
         input.classList.add('temp')
         input.type = 'text'
         input.value = this.innerHTML
         span.title = input.value
+        input.focus()
         //失去焦点时更新内容
         input.addEventListener('blur', function () {
           //如果删到没有东西就直接从行列中删除
           if (input.value === '') {
+            const taskText = span.innerHTML
+            const trashLi = document.createElement('li')
+
+            trashLi.dataset.time = newThing.dataset.time
+            trashLi.dataset.status = newThing.dataset.status
+            trashLi.dataset.category = newThing.dataset.category
+            trashLi.dataset.ddline = newThing.dataset.ddline
+            trashLi.innerHTML = `
+              <span class="tx" title="${taskText}">${taskText}</span>
+              <button class="restore" >还原</button>
+              <button class="delForever">彻底删除</button>
+            `
+            document.querySelector('.trashBox').insertBefore(trashLi, document.querySelector('.trashBox').children[0])
             newThing.remove()
           } else {
             span.innerHTML = input.value
-            span.style.display = 'inline'
+            span.style.display = 'inline-block'
+            span.title = input.value
+            input.remove()
           }
-          this.remove()
+          saveData()
         })
         //按下enter结束输入
         input.addEventListener('keyup', function (e) {
           if (e.key === 'Enter') {
-            //如果删到没有东西就直接从行列中删除
-            if (input.value === '') {
-              newThing.remove()
-            } else {
-              span.innerHTML = input.value
-              span.style.display = 'inline'
-            }
-            this.remove()
+            this.blur()
           }
         })
-        updateCount()
-        saveData()
       })
     }
     //更新未完成数量
     function updateCount() {
-      const total = willDO.querySelectorAll('li').length
-      const done = willDO.querySelectorAll('.finish:checked').length
+      const show = willDO.querySelectorAll('li')
+      let total = 0
+      let done = 0
+      show.forEach(element => {
+        if (element.style.display === 'flex') total++
+        if (element.style.display === 'flex' && element.querySelector('.finish:checked')) done++
+      })
       const surplus = document.querySelector('.surplus span')
       surplus.innerHTML = `<i></i>还有(${total - done})项未完成`
       if (total > 0) {
         checkAll.checked = total === done ? true : false
-      }
-      if (done > 0 && total === done) {
-        document.body.style.backgroundImage = "url('./todo/bg4.jpg')"
-      } else {
-        document.body.style.backgroundImage = "url('./todo/bg2.jpg')"
       }
     }
     const checkAll = document.querySelector('.checkAll')
@@ -191,12 +334,21 @@
         todoList.push({
           text: li.querySelector('.tx').innerText,
           done: li.querySelector('.finish').checked,
-          time: li.querySelector('.now').innerText.replace('1')
+          time: li.dataset.time,
+          status: li.dataset.status,
+          category: li.dataset.category,
+          ddline: li.dataset.ddline
         })
       })
       const trashList = []
       document.querySelector('.trashBox').querySelectorAll('li').forEach(li => {
-        trashList.push({ text: li.querySelector('.tx').innerText })
+        trashList.push({
+          text: li.querySelector('.tx').innerText,
+          time: li.dataset.time,
+          status: li.dataset.status,
+          category: li.dataset.category,
+          ddline: li.dataset.ddline
+        })
       })
       localStorage.setItem('todoData', JSON.stringify(todoList))
       localStorage.setItem('trashData', JSON.stringify(trashList))
@@ -204,8 +356,9 @@
     //给回收站添加事件委托
     const trashBox = document.querySelector('.trashBox')
     trashBox.addEventListener('click', function (e) {
+      const tempLi = e.target.parentElement
       if (e.target.classList.contains('restore')) {
-        upDate(e.target.parentElement.querySelector('.tx').innerText, false)
+        upDate(tempLi.querySelector('.tx').innerText, false, tempLi.dataset.time, tempLi.dataset.status, tempLi.dataset.category, tempLi.dataset.ddline)
         e.target.parentElement.remove()
       } else if (e.target.classList.contains('delForever')) {
         e.target.parentElement.remove()
@@ -219,7 +372,7 @@
       if (data) {
         const items = JSON.parse(data)
         items.reverse().forEach(item => {
-          upDate(item.text, item.done, item.time)
+          upDate(item.text, item.done, item.time, item.status, item.category, item.ddline)
         })
         updateCount()
       }
@@ -229,11 +382,15 @@
         const tItems = JSON.parse(tData)
         tItems.reverse().forEach(item => {
           const trashLi = document.createElement('li')
+          trashLi.dataset.time = item.time
+          trashLi.dataset.status = item.status
+          trashLi.dataset.category = item.category
+          trashLi.dataset.ddline = item.ddline
           trashLi.innerHTML = `
-              <span class="tx" title="${item.text}">${item.text}</span>
-              <button class="restore">还原</button>
-              <button class="delForever">彻底删除</button>
-            `
+            <span class="tx" title="${item.text}">${item.text}</span>
+            <button class="restore">还原</button>
+            <button class="delForever">彻底删除</button>
+           `
           trashBox.insertBefore(trashLi, trashBox.children[0])
         })
       }
@@ -244,31 +401,190 @@
       const lis = document.querySelectorAll('.willDO li')
       if (lis.length > 0) {
         lis.forEach(item => {
-          const taskText = item.querySelector('.tx').innerHTML
-          const trashLi = document.createElement('li')
-          trashLi.innerHTML = `
-        <span class="tx" title="${taskText}">${taskText}</span>
-        <button class="restore" >还原</button>
-        <button class="delForever">彻底删除</button>
-       `
-          trashBox.insertBefore(trashLi, trashBox.children[0])
-          item.remove()
+          if (item.style.display === 'flex') {
+            const taskText = item.querySelector('.tx').innerHTML
+            const trashLi = document.createElement('li')
+            trashLi.dataset.time = item.dataset.time
+            trashLi.dataset.status = item.dataset.status
+            trashLi.dataset.category = item.dataset.category
+            trashLi.dataset.ddline = item.dataset.ddline
+            trashLi.innerHTML = `
+          <span class="tx" title="${taskText}">${taskText}</span>
+          <button class="restore" >还原</button>
+         <button class="delForever">彻底删除</button>
+          `
+            trashBox.insertBefore(trashLi, trashBox.children[0])
+            item.remove()
+          }
         })
         updateCount()
         saveData()
       }
     })
+    //打开函数
+    function myOpen(btn, container) {
+      const existBox = document.querySelectorAll('.move')
+      const existOpen = document.querySelectorAll('.open')
+      if (existBox) {
+        for (let i = 0; i < existBox.length; i++) {
+          if (existBox[i] !== container) {
+            existBox[i].classList.remove('move')
+            existOpen[i].classList.remove('open')
+            existOpen[i].innerHTML = existOpen[i].dataset.open
+          }
+        }
+      }
+      container.classList.toggle('move')
+      btn.classList.toggle('open')
+      if (container.classList.contains('move')) {
+        btn.innerHTML = btn.dataset.close
+      } else {
+        btn.innerHTML = btn.dataset.open
+      }
+    }
     //打开回收站
     const openTrash = document.querySelector('.openTrash')
     const trashContainer = document.querySelector('.trashBox')
     openTrash.addEventListener('click', function () {
-      trashContainer.classList.toggle('move')
-      if (trashContainer.classList.contains('move')) {
-        openTrash.innerHTML = '关闭回收站';
-      } else {
-        openTrash.innerHTML = '打开回收站'
+      myOpen(openTrash, trashContainer)
+    })
+    //点击使用小贴士
+    const openTips = document.querySelector('.tips')
+    const tipsContainer = document.querySelector('.tipsBox')
+    openTips.addEventListener('click', function () {
+      myOpen(openTips, tipsContainer)
+    })
+    //点击查询
+    const openSearch = document.querySelector('.search')
+    const searchContainer = document.querySelector('.searchBox')
+    openSearch.addEventListener('click', function () {
+      myOpen(openSearch, searchContainer)
+      if (!openSearch.classList.contains('open')) {
+        const lis = document.querySelectorAll('.willDO li')
+        lis.forEach(element => {
+          element.style.display = 'flex'
+        })
+        updateCount()
       }
     })
+    //点击设置代办事项
+    const ddl = document.querySelector('.ddl')
+    ddl.addEventListener('click', function () {
+      const DDLlis = document.querySelectorAll('.willDO li .changeDDL')
+      ddl.classList.toggle('open')
+      if (ddl.classList.contains('open')) {
+        ddl.innerHTML = ddl.dataset.close
+        DDLlis.forEach(element => {
+          element.style.display = 'inline-block'
+        })
+      } else {
+        ddl.innerHTML = ddl.dataset.open
+        DDLlis.forEach(element => {
+          element.style.display = 'none'
+        })
+      }
+    })
+    //选择只看分类的内容
+    const just1 = document.querySelector('#just1')
+    just1.addEventListener('change', function () {
+      filterClassic(just1.value)
+    })
+    //筛选函数
+    function filterClassic(classic) {
+      const lis = document.querySelectorAll('.willDO li')
+      lis.forEach(element => {
+        if (classic === 'all' || element.dataset.category === classic) {
+          element.style.display = 'flex'
+        } else {
+          element.style.display = 'none'
+        }
+      })
+      updateCount()
+    }
+    //搜索函数
+    function search(text) {
+      const lis = document.querySelectorAll('.willDO li')
+      lis.forEach(element => {
+        if (element.querySelector('.tx').innerHTML.includes(text)) {
+          element.style.display = 'flex'
+        } else {
+          element.style.display = 'none'
+        }
+      })
+      updateCount()
+    }
+    const searchTx = document.querySelector('.searchInputer input')
+    searchTx.addEventListener('keyup', function (e) {
+      e.preventDefault()
+      if (e.key === 'Enter') {
+        //防止按下输出时文本域内容为空
+        if (searchTx.value.trim() !== '') {
+          search(searchTx.value)
+          saveData()
+        }
+        //清除文本域内容
+        searchTx.value = ''
+      }
+    })
+    const searchBtn = document.querySelector('.searchBtn')
+    searchBtn.addEventListener('click', function () {
+      //防止按下输出时文本域内容为空
+      if (searchTx.value.trim() !== '') {
+        search(searchTx.value)
+        saveData()
+      }
+      //清除文本域内容
+      searchTx.value = ''
+    })
+    //排序函数
+    const just2 = document.querySelector('#just2')
+    just2.addEventListener('change', function () {
+      if (just2.value === 'importance') {
+        upByImportance()
+      } else {
+        upByTime()
+      }
+    })
+    //截至时间函数
+    setInterval(function () {
+      const times = document.querySelectorAll('.willDO .changeDDL')
+      times.forEach(element => {
+        if (element.querySelector('input').value !== '' && !element.closest('li').querySelector('span').classList.contains('active')) {
+          const ddlTime = +new Date(element.querySelector('input').value).getTime()
+          const nowTime = +new Date()
+          if (ddlTime < nowTime) {
+            element.parentElement.style.border = 'red 4px solid'
+          } else {
+            element.parentElement.style.border = 'none'
+          }
+        }
+      })
+    }, 10000)
+    function circle(color) {
+      const lis = document.querySelectorAll('.willDO li')
+      lis.forEach(element => {
+        if (element.dataset.status === color) {
+          willDO.insertBefore(element, willDO.children[0])
+        }
+      })
+    }
+    function upByTime() {
+      const container = document.querySelector('.willDO')
+      const items = Array.from(container.querySelectorAll('li'))
+      items.sort((a, b) => { return new Date(b.dataset.time) - new Date(a.dataset.time) })
+      const lastest = document.createDocumentFragment()
+      items.forEach(item => lastest.appendChild(item))
+      container.innerHTML = ''
+      container.appendChild(lastest)
+
+      filterClassic(just1.value)
+    }
+    function upByImportance() {
+      circle('grey')
+      circle('green')
+      circle('yellow')
+      circle('red')
+    }
     loadData() 
   </script>
 </body>
