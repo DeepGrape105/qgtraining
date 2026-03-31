@@ -1,0 +1,26 @@
+{
+  "processes": [
+    {
+      "name": "粗加工",
+      "id": "5oU0uUs5eBg"
+    },
+    {
+      "name": "精加工",
+      "id": "oCJ-tUzu73g"
+    },
+    {
+      "name": "原料切割",
+      "id": "awrzPmHzyJM"
+    }
+  ],
+  "crafts": [
+    {
+      "name": "工艺二",
+      "id": "BIZ5kwB1HRY"
+    },
+    {
+      "name": "工艺三",
+      "id": "Zy1fafyCg1s"
+    }
+  ]
+}

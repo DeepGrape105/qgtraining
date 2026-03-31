@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="./index.css">
+  <link rel="stylesheet" href="./lib/bootstrap.min.css">
+  <title>Document</title>
+</head>
+
+<body>
+  <div class="content">
+    <section class="process">
+      <div class="processHeader">
+        <h2>标准工序库</h2>
+        <p>拖拽到右侧编辑区</p>
+      </div>
+      <ul class="processList">
+        <!-- <li>原切加个</li> -->
+      </ul>
+      <div class="processBottom">新增工序</div>
+    </section>
+    <section class="craft">
+      <div class="craftHeader">
+        <h2>工艺列表</h2>
+        <button>新建工艺</button>
+      </div>
+      <ul class="craftList">
+        <!-- <li>原切加个</li> -->
+      </ul>
+      <div class="craftBottom">删除当前工艺</div>
+    </section>
+    <section class="newCraft">
+      <div class="newCraftHeader">
+        <h2>工艺：<span>新工艺4</span></h2>
+        <button>保存工艺</button>
+        <button>清空工序</button>
+      </div>
+      <ul class="newCraftContent">
+        <span>将左侧工序拖拽到此处</span>
+      </ul>
+    </section>
+  </div>
+  <!-- 利用bootstrap组件实现新增工序的功能 -->
+  <div class="modal fade" id="processModal">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form id="processForm" autocomplete="off">
+          <div class="modal-header">
+            <h5 class="modal-title">新增工序</h5>
+          </div>
+          <div class="modal-body">
+            <input type="text" name="name" class="form-control" placeholder="工序名称" required>
+          </div>
+          <div class="modal-footer">
+            <button type="submit" class="btn btn-primary submitProcess">保存</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <!-- 利用bootstrap组件实现新增工艺的功能 -->
+  <div class="modal fade" id="craftModal">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form id="craftForm" autocomplete="off">
+          <div class="modal-header">
+            <h5 class="modal-title">新增工艺</h5>
+          </div>
+          <div class="modal-body">
+            <input type="text" name="name" class="form-control" placeholder="工艺名称" required>
+          </div>
+          <div class="modal-footer">
+            <button type="submit" class="btn btn-primary submitCraft">保存</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <script src="./lib/bootstrap.bundle.min.js"></script>
+  <script src="./lib/form-serialize.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="./index.js"></script>
+</body>
+
+</html>

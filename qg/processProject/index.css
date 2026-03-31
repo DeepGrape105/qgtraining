@@ -1,0 +1,210 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+li {
+  list-style: none;
+}
+
+body {
+  background: #F4F5F9;
+}
+
+.content {
+  display: flex;
+  gap: 20px;
+  width: 1300px;
+  max-width: 1400px;
+  height: 70vh;
+  margin: 100px auto
+}
+
+.process,
+.craft,
+.newCraft {
+  display: flex;
+  flex-direction: column;
+  border-radius: 20px;
+  background: #FFFFFF;
+  height: 100%;
+  padding: 10px;
+  border: 2px solid #EEF2F6;
+}
+
+.process {
+  width: 20%;
+}
+
+.craft {
+  width: 21%;
+}
+
+.newCraft {
+  width: 59%;
+}
+
+.processHeader,
+.craftHeader,
+.newCraftHeader {
+  width: 100%;
+  height: 10%;
+  border-bottom: 1px solid #EEF2F6;
+}
+
+.processHeader h2 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-top: 5px;
+  margin-bottom: 3px;
+}
+
+.processHeader p {
+  font-size: 8px;
+  color: #A9B7C6;
+}
+
+.craftHeader {
+  display: flex;
+  padding-bottom: 12px;
+  justify-content: space-between;
+}
+
+.craftHeader h2 {
+  margin-top: 8px;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.craftHeader button {
+  margin-top: 8px;
+  width: 70px;
+  height: 30px;
+  background: #007AFF;
+  border-radius: 8px;
+  color: #FFFFFF;
+  font-size: 11px;
+  font-weight: 400;
+  border: none;
+}
+
+.craftList,
+.processList,
+.newCraftContent {
+  overflow: hidden;
+  display: flex;
+  flex-grow: 1;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  margin-top: 10px;
+  overflow-y: auto;
+}
+
+.craftList::-webkit-scrollbar,
+.processList::-webkit-scrollbar,
+.newCraftContent::-webkit-scrollbar {
+  display: none;
+}
+
+.craftBottom,
+.processBottom {
+  margin-top: 10px;
+  width: 100%;
+  height: 40px;
+  border-radius: 5px;
+  line-height: 40px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 550;
+}
+
+.processBottom {
+  display: block;
+  color: #08642b;
+  border: 2px solid #1b772a;
+  background: #e6f7ee;
+  cursor: pointer;
+}
+
+.craftBottom {
+  /* display: none; */
+  color: #DD3A55;
+  border: 2px solid #F2B0B0;
+  background: #FCEEEE;
+  cursor: pointer;
+}
+
+.newCraftHeader {
+  display: none;
+}
+
+.newCraftHeader h2 {
+  float: left;
+  margin-top: 8px;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.newCraftHeader button {
+  float: right;
+  width: 70px;
+  height: 30px;
+  margin-top: 8px;
+  margin-left: 10px;
+  background: #007AFF;
+  border-radius: 5px;
+  color: #FFFFFF;
+  font-size: 12px;
+  border: none;
+}
+
+button {
+  cursor: pointer;
+}
+
+.newCraftHeader button:last-child {
+  background: #F8FAFC;
+  color: #AFB4BA;
+}
+
+.newCraftContent {
+  position: relative;
+}
+
+.newCraftContent span {
+  position: absolute;
+  color: #6c6c6d;
+  font-size: 14px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.newCraftContent {
+  border: 2px dashed #e5e7e9;
+  border-radius: 20px;
+}
+
+.processList li,
+.craftList li {
+  width: 115%;
+  transform: translateX(-32px);
+  height: 50px;
+  padding: 0 5px;
+  background: #FAFBFC;
+  border-radius: 7px;
+  border: 1px solid #EEF2F6;
+  border-right: 2px solid #EEF2F6;
+  color: #181717;
+  font-size: 14px;
+  line-height: 50px;
+  font-family: "Microsoft YaHei", sans-serif;
+  cursor: pointer;
+}
+
+.move {
+  background: #E9EFFD !important;
+  border: 2px solid #007AFF !important;
+}
