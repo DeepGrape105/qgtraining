@@ -24,13 +24,23 @@
       "innerPoccess": [
         {
           "name": "精加工"
+        },
+        {
+          "name": "原料切割"
+        },
+        {
+          "name": "精加工"
         }
       ]
     },
     {
       "name": "工艺一",
       "id": "0gCJnjkgtRQ",
-      "innerPoccess": []
+      "innerPoccess": [
+        {
+          "name": "精加工"
+        }
+      ]
     },
     {
       "name": "工艺二",

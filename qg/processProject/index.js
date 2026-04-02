@@ -237,17 +237,17 @@ function addMove(e, List) {
     })
     e.target.classList.toggle('move')
   }
+}
 
-  //更新列表
-  function upDataNewCraft(data) {
-    const content = document.querySelector('.newCraftContent')
-    if (data.length > 0) {
-      content.innerHTML = ''
-      document.querySelector('.newCraftContent').innerHTML = data.map((item, index) => `<li>
+//更新列表
+function upDataNewCraft(data) {
+  const content = document.querySelector('.newCraftContent')
+  if (data.length > 0) {
+    content.innerHTML = ''
+    document.querySelector('.newCraftContent').innerHTML = data.map((item, index) => `<li>
           <p>${index + 1}.</p><div class= "pname">${item.name}</div><button>删除工序</button>
         </li>`).join('')
-    } else {
-      content.innerHTML = '<span>将左侧工序拖拽到此处</span>'
-    }
+  } else {
+    content.innerHTML = '<span>将左侧工序拖拽到此处</span>'
   }
 }
