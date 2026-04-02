@@ -85,7 +85,6 @@ body {
   border-radius: 8px;
   color: #FFFFFF;
   font-size: 11px;
-  font-weight: 400;
   border: none;
 }
 
@@ -100,6 +99,10 @@ body {
   width: 100%;
   margin-top: 10px;
   overflow-y: auto;
+}
+
+.newCraftContent {
+  background: #fbfbfb;
 }
 
 .craftList::-webkit-scrollbar,
@@ -188,7 +191,8 @@ button {
 }
 
 .processList li,
-.craftList li {
+.craftList li,
+.newCraftContent li {
   width: 115%;
   transform: translateX(-32px);
   height: 50px;
@@ -204,7 +208,46 @@ button {
   cursor: pointer;
 }
 
+.processList li {
+  cursor: grab;
+}
+
+.newCraftContent li {
+  width: 100%;
+  margin-left: 17px;
+}
+
+.newCraftContent li:first-child {
+  margin-top: 10px;
+}
+
+.newCraftContent p {
+  float: left;
+}
+
+.newCraftContent div {
+  float: left;
+}
+
+.newCraftContent button {
+  float: right;
+  margin-top: 8px;
+  margin-right: 10px;
+  width: 70px;
+  height: 30px;
+  background: #FBFFFF;
+  border-radius: 8px;
+  color: #9A9EA2;
+  font-size: 11px;
+  border: none;
+  line-height: 30px;
+}
+
 .move {
   background: #E9EFFD !important;
   border: 2px solid #007AFF !important;
+}
+
+.show {
+  display: block !important;
 }

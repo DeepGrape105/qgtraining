@@ -1,26 +1,64 @@
 {
   "processes": [
     {
-      "name": "粗加工",
-      "id": "5oU0uUs5eBg"
-    },
-    {
       "name": "精加工",
       "id": "oCJ-tUzu73g"
     },
     {
       "name": "原料切割",
       "id": "awrzPmHzyJM"
+    },
+    {
+      "name": "精加工",
+      "id": "IjW-PRKgZow"
+    },
+    {
+      "name": "清洗",
+      "id": "FMZ9m_Wrrgw"
     }
   ],
   "crafts": [
     {
-      "name": "工艺二",
-      "id": "BIZ5kwB1HRY"
+      "name": "工艺三",
+      "id": "Zy1fafyCg1s",
+      "innerPoccess": [
+        {
+          "name": "精加工"
+        }
+      ]
     },
     {
-      "name": "工艺三",
-      "id": "Zy1fafyCg1s"
+      "name": "工艺一",
+      "id": "0gCJnjkgtRQ",
+      "innerPoccess": []
+    },
+    {
+      "name": "工艺二",
+      "id": "GfNZhhU9u6w",
+      "innerPoccess": []
+    },
+    {
+      "name": "工艺五",
+      "id": "VZXKpIZNbUc",
+      "innerPoccess": [
+        {
+          "name": "原料切割"
+        },
+        {
+          "name": "精加工"
+        },
+        {
+          "name": "精加工"
+        },
+        {
+          "name": "清洗"
+        }
+      ]
+    },
+    {
+      "name": "工艺六",
+      "id": "qXDxa32QJis"
     }
-  ]
+  ],
+  "$schema": "./node_modules/json-server/schema.json"
 }
