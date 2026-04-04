@@ -9,8 +9,8 @@ const craftModal = document.querySelector('#craftModal')
 const modal2 = new bootstrap.Modal(craftModal)
 const craftForm = document.querySelector('#craftForm')
 //直接封装网址接口
-const urlPocess = 'http://localhost:3000/processes'
-const urlCraft = 'http://localhost:3000/crafts'
+const urlPocess = 'http://localhost:3000/api/processes'
+const urlCraft = 'http://localhost:3000/api/crafts'
 
 //打开页面自动更新列表
 upDataList(urlPocess, '.processList')
@@ -33,6 +33,7 @@ document.querySelector('.craftBottom').addEventListener('click', async () => {
     return alert('请先点击选中要删除的工艺')
   }
   const id = moveItem.dataset.id
+  document.querySelector('.newCraftHeader').classList.remove('show')
   try {
     await axios({
       url: `${urlCraft}/${id}`,
