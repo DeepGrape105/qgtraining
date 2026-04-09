@@ -21,42 +21,57 @@ export const useCanvasStore = defineStore('canvas', {
     //     rotation: 0            // 旋转角度
     //   }
     // ],
-    elements: [
-      {
-        id: 'rect_1',
-        type: 'rect',
-        x: 50, y: 50, width: 100, height: 100,
-        fill: '#ff4757', stroke: '#2f3542', strokeWidth: 2, opacity: 1, zIndex: 1
-      },
-      {
-        id: 'circle_1',
-        type: 'circle',
-        x: 300, y: 150,
-        radius: 50, // 圆形特有属性
-        fill: '#1e90ff', stroke: '#2f3542', strokeWidth: 2, opacity: 1, zIndex: 2
-      },
-      {
-        id: 'triangle_1',
-        type: 'triangle',
-        // 三角形由三个顶点坐标决定
-        points: [
-          { x: 500, y: 50 },  // 顶点
-          { x: 450, y: 150 }, // 左下
-          { x: 550, y: 150 }  // 右下
-        ],
-        fill: '#2ed573', stroke: '#2f3542', strokeWidth: 2, opacity: 1, zIndex: 3
-      }
-    ],
-    // 当前选中的元素ID，初始化为 null
-    selection: null,
-    // 画布全局配置
+    elements: [],
+    selection: null,// 当前选中的元素ID，初始化为 null
     canvasConfig: {
       width: 800,
       height: 600,
       backgroundColor: '#ffffff'
-    }
+    } // 画布全局配置
   }),
   actions: {
+    /**
+     * 添加新元素
+     */
+    addElement(type) {
+      const id = `${type}_${Date.now()}`; // 简单生成唯一ID
+      let newElement = {
+        id,
+        type,
+        x: 100, y: 100,
+        fill: '#1890ff',
+        stroke: '#000000',
+        strokeWidth: 1,
+        opacity: 1,
+        zIndex: this.elements.length + 1,
+        rotation: 0
+      };
+      // 针对不同类型的特有属性处理
+      if (type === 'rect') {
+        newElement.width = 100;
+        newElement.height = 100;
+      } else if (type === 'circle') {
+        newElement.radius = 50;
+      } else if (type === 'triangle') {
+        newElement.points = [
+          { x: 150, y: 50 },
+          { x: 100, y: 150 },
+          { x: 200, y: 150 }
+        ];
+      }
+      this.elements.push(newElement);
+      this.selection = id; // 新增后默认选中
+    },
+
+    /**
+     * 删除当前选中元素
+     */
+    removeSelectedElement() {
+      if (!this.selection) return;
+      this.elements = this.elements.filter(el => el.id !== this.selection);
+      this.selection = null;
+    },
+
     /**
      * 更新指定元素的属性
      * @param {string} id 元素的唯一 ID
@@ -71,6 +86,16 @@ export const useCanvasStore = defineStore('canvas', {
         this.elements[index] = { ...this.elements[index], ...props }
       } else {
         console.warn(`[CanvasStore] Element with id ${id} not found.`);
+      }
+    },
+
+    /**
+     * 从本地存储恢复数据
+     */
+    loadFromLocal(data) {
+      if (data && data.elements) {
+        this.elements = data.elements;
+        this.canvasConfig = data.canvasConfig || this.canvasConfig;
       }
     }
   }

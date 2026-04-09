@@ -1,45 +1,66 @@
 <template>
-  <div class="canvas-container">
-    <canvas ref="canvasRef"></canvas>
+  <div class="editor-layout">
+    <Toolbar />
+    <div class="canvas-container">
+      <canvas 
+        ref="canvasRef"
+        @mousedown="onMouseDown"
+        @mousemove="onMouseMove"
+        @mouseup="onMouseUp"
+      ></canvas>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
-import { useCanvas } from '../composables/useCanvas'
+import { ref, onMounted } from 'vue';
+import Toolbar from './Toolbar.vue';
+import { useCanvas } from '../composables/useCanvas';
+import { useInteraction } from '../composables/useInteraction';
+import { usePersistence } from '../hooks/usePersistence';
 
-// 创建一个响应式的引用，用于关联 template 中的 canvas 标签
-const canvasRef = ref(null)
-const { initCanvas, renderLoop, stopLoop } = useCanvas()
+// canvasRef 用于获取 canvas DOM 元素的引用，供 useCanvas 和 useInteraction 使用
+const canvasRef = ref(null);
+const { initCanvas, renderLoop } = useCanvas();
+const { handleMouseDown, handleMouseMove, handleMouseUp } = useInteraction();
+const { initAutoSave, loadLocalData } = usePersistence();
+
+// 转发事件，并传入 canvas 实例供坐标转换使用
+const onMouseDown = (e) => handleMouseDown(e, canvasRef.value);
+const onMouseMove = (e) => handleMouseMove(e, canvasRef.value);
+const onMouseUp = () => handleMouseUp();
 
 onMounted(() => {
-  // 确保 DOM 已经渲染完毕，且获取到了真实的节点
   if (canvasRef.value) {
-    initCanvas(canvasRef.value) // 传入 DOM 节点初始化
-    renderLoop()                // 开启渲染循环
-    console.log('[CanvasBoard] Canvas initialized successfully.');
-  } else {
-    console.error('[CanvasBoard] Canvas ref is null on mounted.');
+    // 1. 先尝试加载本地数据
+    loadLocalData();
+    // 2. 初始化画布
+    initCanvas(canvasRef.value);
+    // 3. 启动渲染循环
+    renderLoop();
+    // 4. 开启自动保存
+    initAutoSave();
   }
-})
-
-onUnmounted(() => {
-    stopLoop(); // 组件卸载时停止渲染循环，防止内存泄漏
-})
+});
 </script>
 
 <style scoped>
+.editor-layout {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
 .canvas-container {
+  width: 100%;
+  height: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 20px;
   background-color: #f0f2f5;
-  min-height: 100vh;
 }
 canvas {
-  /* 添加轻微阴影，视觉上区分画布和背景 */
   box-shadow: 0 0 20px rgba(0,0,0,0.1);
-  background-color: white; 
+  background-color: white;
 }
 </style>

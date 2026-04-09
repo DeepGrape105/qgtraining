@@ -1,9 +1,14 @@
+import { useCanvasStore } from '../store/canvasStore';
+
 // 负责根据元素类型调用不同的绘制方法
 export default class Renderer {
   static draw(ctx, element) {
+    // 访问 store 获取当前选中了谁
+    const store = useCanvasStore(); 
+
     if (!ctx || !element) return;// 基础检查，确保有绘图上下文和元素数据
-    // 保存当前状态，设置全局透明度，以便后续恢复
-    ctx.save();
+
+    ctx.save(); // 保存当前状态，设置全局透明度，以便后续恢复
     ctx.globalAlpha = element.opacity ?? 1;
 
     //分别处理不同类型的元素，调用对应的绘制方法
@@ -20,6 +25,11 @@ export default class Renderer {
           break;
         default:
           console.warn(`[Renderer] 未知类型: ${element.type}`);
+      }
+
+      // 如果当前元素被选中，绘制高亮边框
+      if (store.selection === element.id) {
+        this.drawHighlight(ctx, element);
       }
     } catch (error) {
       console.error(`[Renderer] 渲染错误:`, error);
@@ -72,5 +82,31 @@ export default class Renderer {
       ctx.lineWidth = el.strokeWidth;
       ctx.stroke();
     }
+  }
+
+  /**
+   * 绘制高亮辅助框
+   */
+  static drawHighlight(ctx, el) {
+    ctx.beginPath();// 开始新路径，设置样式
+    ctx.strokeStyle = '#1890ff'; // 经典的选中蓝
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]); // 虚线效果
+
+    // 根据元素类型绘制对应的高亮边框，注意要稍微扩大范围以便更明显
+    if (el.type === 'rect') {
+      ctx.strokeRect(el.x - 5, el.y - 5, el.width + 10, el.height + 10);
+    } else if (el.type === 'circle') {
+      ctx.arc(el.x, el.y, el.radius + 5, 0, Math.PI * 2);
+      ctx.stroke();
+    } else if (el.type === 'triangle') {
+      el.points.forEach((p, i) => {
+        i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y);
+      });
+      ctx.closePath();
+      ctx.stroke();
+    }
+
+    ctx.setLineDash([]); // 恢复实线
   }
 }
