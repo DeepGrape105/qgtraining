@@ -33,7 +33,7 @@ export const useCanvasStore = defineStore('canvas', {
     /**
      * 添加新元素
      */
-    addElement(type) {
+    addElement(type, extraParams = {}) {
       const id = `${type}_${Date.now()}`; // 简单生成唯一ID
       let newElement = {
         id,
@@ -58,6 +58,10 @@ export const useCanvasStore = defineStore('canvas', {
           { x: 100, y: 150 },
           { x: 200, y: 150 }
         ];
+      } else if (type === 'image') {
+        newElement.url = extraParams.url; 
+        newElement.width = extraParams.width || 200;
+        newElement.height = extraParams.height || 200;
       }
       this.elements.push(newElement);
       this.selection = id; // 新增后默认选中

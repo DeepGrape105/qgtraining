@@ -2,9 +2,10 @@ import { useCanvasStore } from '../store/canvasStore';
 
 // 负责根据元素类型调用不同的绘制方法
 export default class Renderer {
+  static imageCache = new Map();
   static draw(ctx, element) {
     // 访问 store 获取当前选中了谁
-    const store = useCanvasStore(); 
+    const store = useCanvasStore();
 
     if (!ctx || !element) return;// 基础检查，确保有绘图上下文和元素数据
 
@@ -22,6 +23,9 @@ export default class Renderer {
           break;
         case 'triangle':
           this.drawTriangle(ctx, element);
+          break;
+        case 'image':
+          this.drawImageElement(ctx, element);
           break;
         default:
           console.warn(`[Renderer] 未知类型: ${element.type}`);
@@ -82,6 +86,71 @@ export default class Renderer {
       ctx.lineWidth = el.strokeWidth;
       ctx.stroke();
     }
+  }
+  /**
+ * 绘制图片元素
+ * 包含：缓存策略、跨域处理、加载占位符、渐进式渲染
+ */
+  static drawImageElement(ctx, element) {
+    // 1. 从静态缓存池获取图片对象
+    let img = this.imageCache.get(element.url);
+
+    // 2. 如果缓存不存在，则初始化加载
+    if (!img) {
+      img = new Image();
+      // 关键：必须设置匿名跨域，否则后期使用 canvas.toDataURL 会报错
+      img.crossOrigin = 'anonymous';
+      img.src = element.url;
+
+      this.imageCache.set(element.url, img);
+
+      // 记录正在加载的状态（可选，用于精细化控制）
+      img.onload = () => {
+        console.log(`[Renderer] 图片加载成功: ${element.url}`);
+      };
+      img.onerror = () => {
+        console.error(`[Renderer] 图片加载失败: ${element.url}`);
+      };
+    }
+
+    // 3. 判断图片状态并绘制
+    if (img.complete && img.naturalWidth !== 0) {
+      // 【状态 A：加载成功】执行真实绘制
+      ctx.drawImage(img, element.x, element.y, element.width, element.height);
+    } else {
+      // 【状态 B：加载中或失败】绘制占位 UI
+      this.drawPlaceholder(ctx, element);
+    }
+  }
+
+  /**
+   * 绘制图片加载中的占位符
+   * 优质注释：提供灰色背景 + 居中提示文字
+   */
+  static drawPlaceholder(ctx, element) {
+    const { x, y, width, height } = element;
+
+    // 1. 绘制背景矩形
+    ctx.fillStyle = '#f7f7f7';
+    ctx.fillRect(x, y, width, height);
+
+    // 2. 绘制虚线边框（更具设计感）
+    ctx.strokeStyle = '#d9d9d9';
+    ctx.setLineDash([5, 5]);
+    ctx.strokeRect(x, y, width, height);
+    ctx.setLineDash([]); // 绘制完记得重置虚线
+
+    // 3. 绘制居中文字
+    ctx.fillStyle = '#999999';
+    ctx.font = '14px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // 计算中心点
+    const centerX = x + width / 2;
+    const centerY = y + height / 2;
+
+    ctx.fillText('图片加载中...', centerX, centerY);
   }
 
   /**

@@ -1,6 +1,7 @@
+require('dotenv').config()
 const express = require('express');
 const cors = require('cors');
-const routes = require('./src/routes');
+const routes = require('../src/routes/index.js');
 
 const app = express();
 
@@ -16,4 +17,5 @@ app.use('/api', routes);
 const PORT = 3000;
 app.listen(PORT, () => {
   console.log(`[Server] 后端服务已启动: http://localhost:${PORT}`);
+  console.log(`name: ${process.env.CLOUDINARY_CLOUD_NAME}`);
 });

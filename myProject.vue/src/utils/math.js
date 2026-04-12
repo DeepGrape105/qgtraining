@@ -58,6 +58,16 @@ export function isPointInElement(px, py, element) {
     case 'rect': return isPointInRect(px, py, element);
     case 'circle': return isPointInCircle(px, py, element);
     case 'triangle': return isPointInTriangle(px, py, element);
+    case 'image': return isPointInImage(px, py, element);
     default: return false;
   }
+}
+
+export function isPointInImage(px, py, image) {
+  return (
+    px >= image.x &&
+    px <= image.x + image.width &&
+    py >= image.y &&
+    py <= image.y + image.height
+  )
 }
