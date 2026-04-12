@@ -7,41 +7,37 @@
         @mousedown="onMouseDown"
         @mousemove="onMouseMove"
         @mouseup="onMouseUp"
+        @wheel="onWheel"
       ></canvas>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import Toolbar from './Toolbar.vue';
-import { useCanvas } from '../composables/useCanvas';
-import { useInteraction } from '../composables/useInteraction';
-import { usePersistence } from '../hooks/usePersistence';
+import { ref, onMounted } from 'vue'
+import Toolbar from './Toolbar.vue'
+import { useCanvas } from '../composables/useCanvas'
+import { useInteraction } from '../composables/useInteraction'
+import { usePersistence } from '../hooks/usePersistence'
 
-// canvasRef 用于获取 canvas DOM 元素的引用，供 useCanvas 和 useInteraction 使用
-const canvasRef = ref(null);
-const { initCanvas, renderLoop } = useCanvas();
-const { handleMouseDown, handleMouseMove, handleMouseUp } = useInteraction();
-const { initAutoSave, loadLocalData } = usePersistence();
+const canvasRef = ref(null)
+const { initCanvas, renderLoop } = useCanvas()
+const { handleMouseDown, handleMouseMove, handleMouseUp, handleWheel } = useInteraction()
+const { initAutoSave, loadLocalData } = usePersistence()
 
-// 转发事件，并传入 canvas 实例供坐标转换使用
-const onMouseDown = (e) => handleMouseDown(e, canvasRef.value);
-const onMouseMove = (e) => handleMouseMove(e, canvasRef.value);
-const onMouseUp = () => handleMouseUp();
+const onMouseDown = (e) => handleMouseDown(e, canvasRef.value)
+const onMouseMove = (e) => handleMouseMove(e, canvasRef.value)
+const onMouseUp = () => handleMouseUp()
+const onWheel = (e) => handleWheel(e, canvasRef.value)
 
 onMounted(() => {
   if (canvasRef.value) {
-    // 1. 先尝试加载本地数据
-    loadLocalData();
-    // 2. 初始化画布
-    initCanvas(canvasRef.value);
-    // 3. 启动渲染循环
-    renderLoop();
-    // 4. 开启自动保存
-    initAutoSave();
+    loadLocalData()
+    initCanvas(canvasRef.value)
+    renderLoop()
+    initAutoSave()
   }
-});
+})
 </script>
 
 <style scoped>
@@ -57,10 +53,12 @@ onMounted(() => {
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: #f0f2f5;
+  background-color: transparent;  /* 背景由 canvas 自己画 */
 }
+
 canvas {
-  box-shadow: 0 0 20px rgba(0,0,0,0.1);
-  background-color: white;
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 </style>

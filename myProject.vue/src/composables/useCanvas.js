@@ -1,89 +1,110 @@
-// 画布相关的核心逻辑封装在这个 composable 中，提供初始化和调整像素，渲染循环等功能
-import Renderer from '../composables/Renderer'
+// src/composables/useCanvas.js
 import { useCanvasStore } from '../store/canvasStore'
+import Renderer from './Renderer'
 
 export function useCanvas() {
-  // 获取画布状态管理的 Pinia store 实例，后续会从这个 store 中读取元素列表和画布配置等状态
   const store = useCanvasStore()
   let ctx = null
   let canvas = null
-  let animationFrameId = null; // 用于可能需要的清理工作
+  let animationFrameId = null
 
-  /**
-   * 初始化 Canvas
-   * @param {HTMLCanvasElement} canvasEl 画布的 DOM 引用
-   */
   const initCanvas = (canvasEl) => {
-    if (!canvasEl || !(canvasEl instanceof HTMLCanvasElement)) {
-      console.error('[useCanvas] Invalid canvas element provided.');
-      return;
-    }// 基础检查，确保传入了有效的 canvas 元素
-
-    // 获取 2D 绘图上下文
     canvas = canvasEl
-    ctx = canvas.getContext('2d', { alpha: false })
+    ctx = canvas.getContext('2d')
 
-    if (!ctx) {
-      console.error('[useCanvas] Failed to get 2D context.');
-      return;
-    }// 基础检查，确保获取到了 2D 绘图上下文
-
-
-    // 处理高清屏（Retina）模糊问题，获取设备像素比（DPR），并根据画布配置调整实际渲染的像素尺寸和样式尺寸，同时缩放绘图上下文以适配 DPR，保证后续绘图指令的坐标和尺寸不受 DPR 影响
-    const dpr = window.devicePixelRatio || 1
-    const { width, height } = store.canvasConfig
-
-    // 1. 设置 Canvas 实际渲染的物理像素
-    canvas.width = Math.floor(width * dpr);
-    canvas.height = Math.floor(height * dpr);
-
-    // 2. 设置在网页上显示的逻辑像素
-    canvas.style.width = `${width}px`
-    canvas.style.height = `${height}px`
-
-    // 3. 缩放绘图上下文，保证后续绘图指令不受 DPR 影响
-    ctx.scale(dpr, dpr)
+    // 画布占满整个容器
+    const resizeCanvas = () => {
+      const container = canvas.parentElement
+      canvas.width = container.clientWidth
+      canvas.height = container.clientHeight
+    }
+    window.addEventListener('resize', resizeCanvas)
+    resizeCanvas()
   }
 
   /**
-   * 渲染循环，由 requestAnimationFrame 驱动
+   * 绘制无限网格背景
    */
-  const renderLoop = () => {
-    if (!ctx || !canvas) return; // 防止未初始化时运行
+  const drawInfiniteGrid = (ctx, offsetX, offsetY, scale, gridSize, width, height) => {
+    ctx.save()
+    ctx.translate(offsetX, offsetY)
+    ctx.scale(scale, scale)
 
-    try {
-      // 1. 获取当前画布配置
-      const { width, height, backgroundColor } = store.canvasConfig;
+    // 用能工作的红色版本，只改颜色
+    ctx.strokeStyle = '#e5e7eb'  // 浅灰色
+    ctx.lineWidth = 0.8 / scale
 
-      // 2. 清空画布
-      ctx.clearRect(0, 0, width, height)
+    const step = 50  // 固定 50px
+    const worldLeft = -offsetX / scale
+    const worldTop = -offsetY / scale
+    const worldRight = worldLeft + width / scale
+    const worldBottom = worldTop + height / scale
 
-      // 3. 绘制底色背景
-      if (backgroundColor) {
-        ctx.fillStyle = backgroundColor
-        ctx.fillRect(0, 0, width, height)
-      }
+    const startX = Math.floor(worldLeft / step) * step
+    const startY = Math.floor(worldTop / step) * step
 
-      // 4. 排序并渲染元素（通过 zIndex 控制层级），用sort方法排序小的 zIndex 在前，大的在后，保证后渲染的元素覆盖在前面
-      const sortedElements = [...store.elements].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+    ctx.beginPath()
 
-      // 5. 逐个渲染
-      for (const el of sortedElements) {
-        Renderer.draw(ctx, el);
-      }
-    } catch (err) {
-      console.error('[renderLoop] Error during rendering:', err);
+    for (let x = startX; x <= worldRight; x += step) {
+      ctx.moveTo(x, worldTop)
+      ctx.lineTo(x, worldBottom)
     }
 
-    // 请求下一帧
+    for (let y = startY; y <= worldBottom; y += step) {
+      ctx.moveTo(worldLeft, y)
+      ctx.lineTo(worldRight, y)
+    }
+
+    ctx.stroke()
+    ctx.restore()
+  }
+
+  const renderLoop = () => {
+    if (!ctx || !canvas) return
+
+    const { backgroundColor, showGrid, gridSize } = store.canvasConfig
+    const { offsetX, offsetY, scale } = store.viewport
+    const width = canvas.width
+    const height = canvas.height
+
+    // 1. 清空整个画布
+    ctx.clearRect(0, 0, width, height)
+
+    // 2. 画背景色
+    ctx.fillStyle = backgroundColor
+    ctx.fillRect(0, 0, width, height)
+
+    // 3. 画无限网格（如果开启）
+    if (showGrid) {
+      drawInfiniteGrid(ctx, offsetX, offsetY, scale, gridSize, width, height)
+    }
+
+    // 4. 画所有图形
+    ctx.save()
+    ctx.translate(offsetX, offsetY)
+    ctx.scale(scale, scale)
+
+    const sortedElements = [...store.elements].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0))
+    for (const el of sortedElements) {
+      Renderer.draw(ctx, el)
+    }
+
+    // 5. 画选中框
+    if (store.selection) {
+      const selectedEl = store.elements.find(el => el.id === store.selection)
+      if (selectedEl) {
+        Renderer.drawHighlight(ctx, selectedEl)
+      }
+    }
+
+    ctx.restore()
+
     animationFrameId = requestAnimationFrame(renderLoop)
   }
 
-  // 清理函数
   const stopLoop = () => {
-    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+    if (animationFrameId) cancelAnimationFrame(animationFrameId)
   }
 
-  // 返回初始化函数和渲染循环控制函数，供组件使用
   return { initCanvas, renderLoop, stopLoop }
 }

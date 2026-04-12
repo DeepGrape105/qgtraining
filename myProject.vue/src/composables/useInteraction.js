@@ -1,72 +1,117 @@
-//本文件用于处理鼠标交互的逻辑，包括拖拽、移动等操作
+/**
+   * 内部状态（isDragging, isPanning, lastMousePos）
+   * 坐标工具（getScreenCoords, getWorldCoords）
+   * 事件处理（handleMouseDown, handleMouseMove, handleMouseUp, handleWheel）
+   */
 
-//需要引入 store 来获取元素数据，以及引入数学工具函数来判断点是否在元素内
-import { useCanvasStore } from '../store/canvasStore';
-import { isPointInElement } from '../utils/math';
+//引用依赖项
+import { useCanvasStore } from '../store/canvasStore'
+import { isPointInElement } from '../utils/math'
+import { useElements } from './useElements'
+import { useViewport } from './useViewport'
 
 export function useInteraction() {
-  const store = useCanvasStore();
+  const store = useCanvasStore()
+  const { updateElement, updateSelected, setSelection, clearSelection, getSelectedElement } = useElements()
+  const { getViewport, panViewport, zoomIn, zoomOut } = useViewport()
 
-  // 内部状态，不需要暴露给外部
-  let isDragging = false;
-  let lastMousePos = { x: 0, y: 0 };
+  //内部状态，用于跟踪当前是否在拖动元素或平移视口，以及上一次鼠标位置
+  let isDragging = false
+  let isPanning = false
+  let lastMousePos = { x: 0, y: 0 }
 
-  /**
-   * 核心：坐标转换
-   * 将鼠标在屏幕上的 clientX/Y 转为相对于 Canvas 左上角的坐标
-   */
-  const getCanvasCoords = (e, canvasEl) => {
-    const rect = canvasEl.getBoundingClientRect();
+  // 获取鼠标在屏幕上的坐标
+  const getScreenCoords = (e, canvasEl) => {
+    const rect = canvasEl.getBoundingClientRect()
     return {
       x: e.clientX - rect.left,
       y: e.clientY - rect.top
-    };
-  };
+    }
+  }
+
+  // 获取图形在无限画布上的坐标
+  const getWorldCoords = (e, canvasEl) => {
+    const screen = getScreenCoords(e, canvasEl)
+    const { offsetX, offsetY, scale } = getViewport()
+    return {
+      x: (screen.x - offsetX) / scale,
+      y: (screen.y - offsetY) / scale
+    }
+  }
 
   const handleMouseDown = (e, canvasEl) => {
-    const { x, y } = getCanvasCoords(e, canvasEl);
-    lastMousePos = { x, y };
+    const screenPos = getScreenCoords(e, canvasEl)
+    lastMousePos = { x: screenPos.x, y: screenPos.y }
 
-    // 拾取逻辑：从后往前找（zIndex 高的优先被选中）
+    const worldPos = getWorldCoords(e, canvasEl)
+
     const target = [...store.elements]
       .sort((a, b) => (b.zIndex || 0) - (a.zIndex || 0))
-      .find(el => isPointInElement(x, y, el));
+      .find(el => isPointInElement(worldPos.x, worldPos.y, el))
 
     if (target) {
-      store.selection = target.id; // 设为选中
-      isDragging = true;
+      setSelection(target.id)
+      isDragging = true
+      isPanning = false
     } else {
-      store.selection = null; // 点空白处清空选中
+      clearSelection()
+      isPanning = true
+      isDragging = false
     }
-  };
+  }
 
   const handleMouseMove = (e, canvasEl) => {
-    if (!isDragging || !store.selection) return;
+    const screenPos = getScreenCoords(e, canvasEl)
+    const dx = screenPos.x - lastMousePos.x
+    const dy = screenPos.y - lastMousePos.y
 
-    const { x, y } = getCanvasCoords(e, canvasEl);
-    const dx = x - lastMousePos.x; // 计算位移增量
-    const dy = y - lastMousePos.y;
+    if (isDragging && store.selection) {
+      const { scale } = getViewport()
+      const worldDx = dx / scale
+      const worldDy = dy / scale
 
-    const element = store.elements.find(el => el.id === store.selection);
-    if (element) {
-      // 针对不同形状更新坐标
-      if (element.type === 'triangle') {
-        const newPoints = element.points.map(p => ({ x: p.x + dx, y: p.y + dy }));
-        store.updateElement(element.id, { points: newPoints });
-      } else {
-        store.updateElement(element.id, {
-          x: element.x + dx,
-          y: element.y + dy
-        });
+      const element = getSelectedElement()
+      if (element) {
+        if (element.type === 'triangle') {
+          const newPoints = element.points.map(p => ({
+            x: p.x + worldDx,
+            y: p.y + worldDy
+          }))
+          updateElement(element.id, { points: newPoints })
+        } else {
+          updateSelected({
+            x: element.x + worldDx,
+            y: element.y + worldDy
+          })
+        }
       }
+    } else if (isPanning) {
+      panViewport(dx, dy)
     }
 
-    lastMousePos = { x, y }; // 更新最后位置
-  };
+    lastMousePos = { x: screenPos.x, y: screenPos.y }
+  }
 
   const handleMouseUp = () => {
-    isDragging = false;
-  };
+    isDragging = false
+    isPanning = false
+  }
 
-  return { handleMouseDown, handleMouseMove, handleMouseUp };
+  const handleWheel = (e, canvasEl) => {
+    e.preventDefault()
+    const screenPos = getScreenCoords(e, canvasEl)
+
+    if (e.deltaY < 0) {
+      zoomIn(screenPos.x, screenPos.y)
+    } else {
+      zoomOut(screenPos.x, screenPos.y)
+    }
+  }
+
+  return {
+    handleMouseDown,
+    handleMouseMove,
+    handleMouseUp,
+    handleWheel
+  }
 }

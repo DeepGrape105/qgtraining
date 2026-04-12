@@ -23,3 +23,12 @@ export const getLatestCanvasApi = (canvasId) => {
 export const getHistoryListApi = (canvasId) => {
   return request.get(`/canvas/${canvasId}/history`);
 };
+
+/**
+ * 获取指定快照的完整画布数据
+ * @param {string} canvasId 画布ID
+ * @param {string|number} snapshotId 快照ID
+ */
+export const getSnapshotDataApi = (canvasId, snapshotId) => {
+  return request.get(`/canvas/${canvasId}/snapshot/${snapshotId}`);
+};

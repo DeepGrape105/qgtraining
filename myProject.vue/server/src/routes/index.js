@@ -35,5 +35,6 @@ router.post('/upload', validateToken, upload.single('file'), async (req, res) =>
 router.put('/canvas/:id', validateToken, canvasController.saveCanvas);
 router.get('/canvas/:id', validateToken, canvasController.getLatestCanvas);
 router.get('/canvas/:id/history', validateToken, canvasController.getHistory);
+router.get('/canvas/:id/snapshot/:snapshotId', validateToken, canvasController.getSnapshotData);
 
 module.exports = router;

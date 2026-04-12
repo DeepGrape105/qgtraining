@@ -67,6 +67,29 @@ class CanvasController {
       res.status(500).json({ success: false, message: '获取历史记录失败' });
     }
   }
+
+  /**
+   * 获取指定历史版本的完整数据
+   */
+  async getSnapshotData(req, res) {
+    try {
+      const { snapshotId } = req.params;
+      const snapshot = await snapshotRepo.findSnapshotById(snapshotId);
+
+      if (!snapshot) {
+        return res.status(404).json({ success: false, message: '快照不存在' });
+      }
+
+      res.json({
+        success: true,
+        // 数据库里存的是字符串，还给前端前解析成 JSON 对象
+        data: JSON.parse(snapshot.content)
+      });
+    } catch (error) {
+      console.error('[CanvasController] 获取快照失败:', error);
+      res.status(500).json({ success: false, message: '获取快照失败' });
+    }
+  }
 }
 
 module.exports = new CanvasController();

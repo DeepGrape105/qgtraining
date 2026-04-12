@@ -11,6 +11,17 @@ class SnapshotRepo {
     );
     return rows;
   }
+
+  /**
+   * 根据快照ID获取具体的画布内容
+   */
+  async findSnapshotById(snapshotId) {
+    const [rows] = await pool.query(
+      'SELECT content FROM snapshots WHERE id = ?',
+      [snapshotId]
+    );
+    return rows[0] || null;
+  }
 }
 
 module.exports = new SnapshotRepo();
