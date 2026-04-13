@@ -59,6 +59,7 @@ export function isPointInElement(px, py, element) {
     case 'circle': return isPointInCircle(px, py, element);
     case 'triangle': return isPointInTriangle(px, py, element);
     case 'image': return isPointInImage(px, py, element);
+    case 'text': return isPointInText(px, py, element);
     default: return false;
   }
 }
@@ -70,4 +71,55 @@ export function isPointInImage(px, py, image) {
     py >= image.y &&
     py <= image.y + image.height
   )
+}
+
+export function isPointInText(px, py, textElement) {
+  // 文本判定通常基于其渲染出的左上角坐标
+  const w = textElement.width || 0;
+  const h = textElement.height || (textElement.fontSize || 20);
+
+  return (
+    px >= textElement.x &&
+    px <= textElement.x + w &&
+    py >= textElement.y &&
+    py <= textElement.y + h
+  );
+}
+
+export function isElementInRect(element, rect) {
+  let elRect
+
+  if (element.type === 'rect' || element.type === 'image') {
+    elRect = { x: element.x, y: element.y, width: element.width, height: element.height }
+  } else if (element.type === 'circle') {
+    elRect = {
+      x: element.x - element.radius,
+      y: element.y - element.radius,
+      width: element.radius * 2,
+      height: element.radius * 2
+    }
+  } else if (element.type === 'triangle') {
+    const xs = element.points.map(p => p.x)
+    const ys = element.points.map(p => p.y)
+    elRect = {
+      x: Math.min(...xs),
+      y: Math.min(...ys),
+      width: Math.max(...xs) - Math.min(...xs),
+      height: Math.max(...ys) - Math.min(...ys)
+    }
+  } else if (element.type === 'text') {
+    elRect = {
+      x: element.x,
+      y: element.y,
+      width: element.width || 100,
+      height: element.height || 20
+    }
+  } else {
+    return false
+  }
+
+  return !(elRect.x + elRect.width < rect.x ||
+    rect.x + rect.width < elRect.x ||
+    elRect.y + elRect.height < rect.y ||
+    rect.y + rect.height < elRect.y)
 }

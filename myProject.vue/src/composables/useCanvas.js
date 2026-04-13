@@ -89,6 +89,26 @@ export function useCanvas() {
       Renderer.draw(ctx, el)
     }
 
+    // 画框选矩形
+    if (store.marqueeRect) {
+      const rect = store.marqueeRect
+
+      ctx.save()
+      ctx.translate(offsetX, offsetY)
+      ctx.scale(scale, scale)
+
+      ctx.strokeStyle = '#1890ff'
+      ctx.lineWidth = 1.5 / scale
+      ctx.setLineDash([5 / scale, 5 / scale])
+      ctx.strokeRect(rect.x, rect.y, rect.width, rect.height)
+
+      ctx.fillStyle = 'rgba(24, 144, 255, 0.1)'
+      ctx.fillRect(rect.x, rect.y, rect.width, rect.height)
+
+      ctx.setLineDash([])
+      ctx.restore()
+    }
+
     // 5. 画选中框
     if (store.selection) {
       const selectedEl = store.elements.find(el => el.id === store.selection)

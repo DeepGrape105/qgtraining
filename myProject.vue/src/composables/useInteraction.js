@@ -1,90 +1,153 @@
-/**
-   * 内部状态（isDragging, isPanning, lastMousePos）
-   * 坐标工具（getScreenCoords, getWorldCoords）
-   * 事件处理（handleMouseDown, handleMouseMove, handleMouseUp, handleWheel）
-   */
-
-//引用依赖项
 import { useCanvasStore } from '../store/canvasStore'
 import { isPointInElement } from '../utils/math'
 import { useElements } from './useElements'
 import { useViewport } from './useViewport'
+import { useHistory } from './useHistory'
+import { useText } from './useText'
+import { onMounted, onUnmounted } from 'vue'
+
+let globalLastClickTime = 0
+let globalLastSelectedId = null
 
 export function useInteraction() {
   const store = useCanvasStore()
-  const { updateElement, updateSelected, setSelection, clearSelection, getSelectedElement } = useElements()
+  const { updateElement, setSelection, clearSelection, toggleSelection } = useElements()
   const { getViewport, panViewport, zoomIn, zoomOut } = useViewport()
+  const { record } = useHistory()
+  const { startEditing, editingId } = useText()
 
-  //内部状态，用于跟踪当前是否在拖动元素或平移视口，以及上一次鼠标位置
   let isDragging = false
   let isPanning = false
   let lastMousePos = { x: 0, y: 0 }
+  let isMarqueeSelecting = false
+  let marqueeStart = null
+  let marqueeEnd = null
+  let isSpacePressed = false
 
-  // 获取鼠标在屏幕上的坐标
   const getScreenCoords = (e, canvasEl) => {
     const rect = canvasEl.getBoundingClientRect()
-    return {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
-    }
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top }
   }
 
-  // 获取图形在无限画布上的坐标
   const getWorldCoords = (e, canvasEl) => {
     const screen = getScreenCoords(e, canvasEl)
     const { offsetX, offsetY, scale } = getViewport()
     return {
-      x: (screen.x - offsetX) / scale,
-      y: (screen.y - offsetY) / scale
+      x: Math.round((screen.x - offsetX) / scale * 100) / 100,
+      y: Math.round((screen.y - offsetY) / scale * 100) / 100
+    }
+  }
+
+  const handleKeyDown = (e) => {
+    if (e.code === 'Space' && !editingId.value) {
+      isSpacePressed = true
+      e.preventDefault()
+    }
+  }
+
+  const handleKeyUp = (e) => {
+    if (e.code === 'Space') {
+      isSpacePressed = false
     }
   }
 
   const handleMouseDown = (e, canvasEl) => {
-    const screenPos = getScreenCoords(e, canvasEl)
-    lastMousePos = { x: screenPos.x, y: screenPos.y }
+    if (editingId.value) return
 
     const worldPos = getWorldCoords(e, canvasEl)
+    const now = Date.now()
 
-    const target = [...store.elements]
+    const clickedEl = [...store.elements]
       .sort((a, b) => (b.zIndex || 0) - (a.zIndex || 0))
       .find(el => isPointInElement(worldPos.x, worldPos.y, el))
 
-    if (target) {
-      setSelection(target.id)
-      isDragging = true
+    if (clickedEl) {
+      if (now - globalLastClickTime < 300 && globalLastSelectedId === clickedEl.id) {
+        if (clickedEl.type === 'text') {
+          startEditing(clickedEl.id)
+          globalLastClickTime = 0
+          return
+        }
+      }
+      globalLastClickTime = now
+      globalLastSelectedId = clickedEl.id
+
+      if (e.shiftKey) {
+        toggleSelection(clickedEl.id)
+        isDragging = false
+      } else {
+        if (store.selectedIds.includes(clickedEl.id)) {
+          isDragging = true
+        } else {
+          setSelection(clickedEl.id)
+          isDragging = false
+        }
+      }
+
+      const screenPos = getScreenCoords(e, canvasEl)
+      lastMousePos = { x: screenPos.x, y: screenPos.y }
       isPanning = false
+      isMarqueeSelecting = false
+
     } else {
-      clearSelection()
-      isPanning = true
-      isDragging = false
+      if (isSpacePressed) {
+        clearSelection()
+        isPanning = true
+        isMarqueeSelecting = false
+        const screenPos = getScreenCoords(e, canvasEl)
+        lastMousePos = { x: screenPos.x, y: screenPos.y }
+      } else {
+        if (!e.shiftKey) clearSelection()
+        isMarqueeSelecting = true
+        marqueeStart = worldPos
+        marqueeEnd = worldPos
+        isPanning = false
+        isDragging = false
+      }
     }
   }
 
   const handleMouseMove = (e, canvasEl) => {
+    if (isMarqueeSelecting) {
+      marqueeEnd = getWorldCoords(e, canvasEl)
+      const rect = {
+        x: Math.min(marqueeStart.x, marqueeEnd.x),
+        y: Math.min(marqueeStart.y, marqueeEnd.y),
+        width: Math.abs(marqueeEnd.x - marqueeStart.x),
+        height: Math.abs(marqueeEnd.y - marqueeStart.y)
+      }
+      store.marqueeRect = rect
+
+      import('../utils/math').then(({ isElementInRect }) => {
+        const selected = store.elements.filter(el => isElementInRect(el, rect))
+        store.selectedIds = selected.map(el => el.id)
+      })
+      return
+    }
+
+    if (editingId.value) return
+
     const screenPos = getScreenCoords(e, canvasEl)
     const dx = screenPos.x - lastMousePos.x
     const dy = screenPos.y - lastMousePos.y
 
-    if (isDragging && store.selection) {
+    if (isDragging) {
       const { scale } = getViewport()
       const worldDx = dx / scale
       const worldDy = dy / scale
 
-      const element = getSelectedElement()
-      if (element) {
-        if (element.type === 'triangle') {
-          const newPoints = element.points.map(p => ({
-            x: p.x + worldDx,
-            y: p.y + worldDy
-          }))
-          updateElement(element.id, { points: newPoints })
-        } else {
-          updateSelected({
-            x: element.x + worldDx,
-            y: element.y + worldDy
-          })
+      store.selectedIds.forEach(id => {
+        const el = store.elements.find(e => e.id === id)
+        if (el) {
+          if (el.type === 'triangle') {
+            updateElement(id, {
+              points: el.points.map(p => ({ x: p.x + worldDx, y: p.y + worldDy }))
+            })
+          } else {
+            updateElement(id, { x: el.x + worldDx, y: el.y + worldDy })
+          }
         }
-      }
+      })
     } else if (isPanning) {
       panViewport(dx, dy)
     }
@@ -93,20 +156,37 @@ export function useInteraction() {
   }
 
   const handleMouseUp = () => {
+    if (isMarqueeSelecting) {
+      isMarqueeSelecting = false
+      marqueeStart = null
+      marqueeEnd = null
+      store.marqueeRect = null
+    }
+    if (isDragging) record()
     isDragging = false
     isPanning = false
   }
 
   const handleWheel = (e, canvasEl) => {
     e.preventDefault()
-    const screenPos = getScreenCoords(e, canvasEl)
 
-    if (e.deltaY < 0) {
-      zoomIn(screenPos.x, screenPos.y)
+    if (e.ctrlKey || e.metaKey) {
+      const screenPos = getScreenCoords(e, canvasEl)
+      e.deltaY < 0 ? zoomIn(screenPos.x, screenPos.y) : zoomOut(screenPos.x, screenPos.y)
     } else {
-      zoomOut(screenPos.x, screenPos.y)
+      panViewport(-e.deltaX, -e.deltaY)
     }
   }
+
+  onMounted(() => {
+    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('keyup', handleKeyUp)
+  })
+
+  onUnmounted(() => {
+    window.removeEventListener('keydown', handleKeyDown)
+    window.removeEventListener('keyup', handleKeyUp)
+  })
 
   return {
     handleMouseDown,

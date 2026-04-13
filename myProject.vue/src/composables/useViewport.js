@@ -1,7 +1,7 @@
 /**
   * 
   */
-import { useCanvasStore } from '@/store/canvasStore'
+import { useCanvasStore } from '../store/canvasStore'
 
 export function useViewport() {
   const store = useCanvasStore()

@@ -7,7 +7,8 @@
     * 持久化恢复（restoreState）
    */
   
-import { useCanvasStore } from '@/store/canvasStore'
+import { useCanvasStore } from '../store/canvasStore'
+import { useHistory } from './useHistory'
 
 /**
  * 元素业务逻辑层
@@ -15,14 +16,13 @@ import { useCanvasStore } from '@/store/canvasStore'
  */
 export function useElements() {
   const store = useCanvasStore()
+  const { record } = useHistory()
 
   /**
    * 生成唯一 ID
    * 处理逻辑：使用类型前缀 + 时间戳 + 随机字符串，确保在高频操作下也不会重复
    */
-  const generateId = (type) => {
-    return `${type}_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`
-  }
+  const generateId = (type) => `${type}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
 
   /**
    * 获取基础元素属性（所有图形共用的）
@@ -34,6 +34,7 @@ export function useElements() {
     y: 100,
     fill: '#1890ff',
     stroke: '#000000',
+    backgroundColor: transparent,
     strokeWidth: 1,
     opacity: 1,
     zIndex: store.elements.length + 1,
@@ -44,6 +45,7 @@ export function useElements() {
    * 添加矩形
    */
   const addRect = () => {
+    record()
     const id = generateId('rect')
     const element = {
       ...getBaseElement('rect', id),
@@ -58,6 +60,7 @@ export function useElements() {
    * 添加圆形
    */
   const addCircle = () => {
+    record()
     const id = generateId('circle')
     const element = {
       ...getBaseElement('circle', id),
@@ -71,6 +74,7 @@ export function useElements() {
    * 添加三角形
    */
   const addTriangle = () => {
+    record()
     const id = generateId('triangle')
     const element = {
       ...getBaseElement('triangle', id),
@@ -91,6 +95,7 @@ export function useElements() {
    * 2.如果未提供宽高，则默认设置为 200x200，同时保持图片的原始宽高比进行缩放，防止图片过大
    */
   const addImage = (url, width, height) => {
+    record()
     const id = generateId('image')
 
     //1.接受图片 URL 和可选的宽高参数，并限制最大宽度为 300
@@ -120,9 +125,11 @@ export function useElements() {
    * 如果有选中元素，则过滤掉该元素，并清空选中状态
    */
   const removeSelected = () => {
-    if (!store.selection) return  
-    store.elements = store.elements.filter(el => el.id !== store.selection)
-    store.selection = null
+    if (store.selectedIds.length === 0) return
+    record()
+    store.elements = store.elements.filter(el => !store.selectedIds.includes(el.id))
+    store.selectedIds = []
+
   }
 
   /**
@@ -145,8 +152,24 @@ export function useElements() {
    * 更新选中的元素的属性的快捷方法，方便Toolbar组件调用
    */
   const updateSelected = (props) => {
-    if (!store.selection) return
-    updateElement(store.selection, props)
+    store.selectedIds.forEach(id => updateElement(id, props))
+  }
+
+  // 剪贴板逻辑
+  const copyElement = () => {
+    const target = store.elements.find(el => el.id === store.selection)
+    if (target) store.clipboard = JSON.stringify(target)
+  }
+
+  const pasteElement = () => {
+    record()
+    if (!store.clipboard) return
+    record()
+    const newEl = JSON.parse(store.clipboard)
+    newEl.id = generateId(newEl.type)
+    newEl.x += 20; newEl.y += 20
+    store.elements.push(newEl)
+    store.selection = newEl.id
   }
 
   /**
@@ -160,22 +183,23 @@ export function useElements() {
    * 清空选中
    */
   const clearSelection = () => {
-    store.selection = null
+    store.selectedIds = []
   }
+
 
   /**
    * 设置选中
    */
   const setSelection = (id) => {
-    store.selection = id
+    store.selectedIds = [id]
   }
 
   /**
    * 获取当前选中的元素
    */
   const getSelectedElement = () => {
-    if (!store.selection) return null
-    return store.elements.find(el => el.id === store.selection)
+    const id = store.selectedIds[0]
+    return id ? store.elements.find(el => el.id === id) : null
   }
 
     /**
@@ -218,7 +242,46 @@ export function useElements() {
     }
   }
 
+  const bringToFront = () => {
+    const el = store.elements.find(e => e.id === store.selection);
+    if (!el) return;
+    record();
+    const maxZ = Math.max(...store.elements.map(e => e.zIndex || 0), 0);
+    el.zIndex = maxZ + 1;
+  };
+
+  // 2. 修改层级：置底
+  const sendToBack = () => {
+    const el = store.elements.find(e => e.id === store.selection);
+    if (!el) return;
+    record();
+    const minZ = Math.min(...store.elements.map(e => e.zIndex || 0), 0);
+    el.zIndex = minZ - 1;
+  };
+
+  // 3. 状态切换：锁定/隐藏 (需要在 getBaseElement 里增加默认字段)
+  const toggleLock = (id) => {
+    const el = store.elements.find(e => e.id === id);
+    if (el) el.isLocked = !el.isLocked;
+  };
+
+  const toggleVisible = (id) => {
+    const el = store.elements.find(e => e.id === id);
+    if (el) el.isVisible = (el.isVisible === undefined) ? false : !el.isVisible;
+  };
+
+  const toggleSelection = (id) => {
+    if (store.selectedIds.includes(id)) {
+      store.selectedIds = store.selectedIds.filter(i => i !== id)
+    } else {
+      store.selectedIds.push(id)
+    }
+  }
+
   return {
+    // 内部工具函数
+    generateId,
+    getBaseElement,
     // 添加
     addRect,
     addCircle,
@@ -229,6 +292,9 @@ export function useElements() {
     // 更新
     updateElement,
     updateSelected,
+    // 剪贴板
+    copyElement,
+    pasteElement,
     // 批量操作
     setElements,
     // 选中操作
@@ -240,6 +306,14 @@ export function useElements() {
     setConfig,
     getElements,
     getSelection,
-    restoreState
+    restoreState,
+    // 层级操作
+    bringToFront,
+    sendToBack,
+    // 状态切换
+    toggleLock,
+    toggleVisible,
+    //选中操作
+    toggleSelection
   }
 }

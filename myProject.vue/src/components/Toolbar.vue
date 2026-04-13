@@ -1,9 +1,13 @@
 <template>
   <div class="toolbar">
     <div class="tool-group">
+      <span class="hint">␣ 按住空格拖拽画布</span>
+    </div>
+    <div class="tool-group">
       <button class="tool-btn" @click="addRect">矩形</button>
       <button class="tool-btn" @click="addCircle">圆形</button>
       <button class="tool-btn" @click="addTriangle">三角形</button>
+       <button class="tool-btn" @click="addText">📝文本</button> 
       <button 
         class="tool-btn upload-btn" 
         @click="triggerUpload" 
@@ -89,11 +93,15 @@ import { useElements } from '../composables/useElements'
 import { saveCanvasApi, getHistoryListApi, getSnapshotDataApi } from '../api/canvas'
 import { uploadImageApi } from '../api/upload'
 import { useViewport } from '../composables/useViewport'
+import{ useHistory } from '../composables/useHistory'
+import { useText } from '../composables/useText'
 
 
 const store = useCanvasStore()
 const { getViewport, resetViewport, zoomIn, zoomOut } = useViewport()
 const viewport = computed(() => getViewport())
+const { record } = useHistory()
+const {addText} = useText()
 const { 
   addRect, 
   addCircle, 
@@ -118,13 +126,18 @@ const historyList = ref([]);
 const selectedHistory = ref('');
 
 // 当前选中元素响应式引用
-const selectedEl = computed(() => getSelectedElement())
+const selectedEl = computed(() => {
+  const ids = store.selectedIds
+  if (ids.length !== 1) return null  // 多选或没选时返回 null
+  return store.elements.find(el => el.id === ids[0])
+})
 
 /**
  * 更新选中元素的填充颜色
  * @param {string} color - Hex 颜色值
  */
 const updateElementFill = (color) => {
+  record() 
   updateSelected({ fill: color })
 }
 
@@ -480,5 +493,10 @@ const toggleGrid = () => {
   padding: 0 4px;
   min-width: 45px;
   text-align: center;
+}
+.hint {
+  color: #94a3b8;
+  font-size: 12px;
+  padding: 0 8px;
 }
 </style>
