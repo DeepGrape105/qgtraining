@@ -9,6 +9,7 @@
     <textarea
       ref="inputRef"
       v-model="editingText"
+      style="caret-color: #000000;"
       @blur="onBlur"
       @keydown.enter="onEnter"
       @keydown.esc="cancel"
@@ -43,6 +44,11 @@ watch(editingId, async (id) => {
   }
 })
 
+const textColor = computed(() => {
+  const el = store.elements.find(e => e.id === editingId.value)
+  return el?.fill || '#000000'
+})
+
 const autoResize = () => {
   const el = inputRef.value
   if (el) {
@@ -52,9 +58,7 @@ const autoResize = () => {
 }
 
 const onInput = () => {
-  autoResize()
-  // 实时更新画布文字
-  if (editingId.value) {
+   if (editingId.value) {
     const el = store.elements.find(e => e.id === editingId.value)
     if (el) {
       el.text = editingText.value
@@ -82,17 +86,16 @@ const editorStyle = computed(() => {
 
   const { offsetX, offsetY, scale } = store.viewport
   const fontSize = (el.fontSize || 20) * scale
-  const text = el.text || ''
-  
-  // 根据文字长度估算宽度
-  const estimatedWidth = Math.max(text.length * fontSize * 0.6, 150)
+  const boxWidth = (el.width || 200) * scale
+  const boxHeight = (el.height || 40) * scale
   
   return {
     position: 'absolute',
     left: `${el.x * scale + offsetX}px`,
     top: `${el.y * scale + offsetY}px`,
+    width: `${boxWidth}px`,
+    height: `${boxHeight}px`,
     fontSize: `${fontSize}px`,
-    width: `${estimatedWidth}px`,
     color: el.fill || '#000000',
     fontWeight: el.fontWeight || 'normal',
     fontFamily: 'Arial, sans-serif',
@@ -126,24 +129,22 @@ const cancel = () => {
   background: transparent;
 }
 textarea {
-  display: inline-block; 
+  width: 100%;
+  height: 100%;
   border: none;
   outline: none;
-  padding: 0;
+  padding: 8px;
   margin: 0;
   background: transparent;
   color: inherit;
   font-size: inherit;
   font-family: inherit;
   font-weight: inherit;
-  line-height: 1.2;
+  line-height: 1.4;
   resize: none;
-  overflow: visible;
-  white-space: pre-wrap;
-  word-break: break-word;
-  caret-color: #007aff;
-  width: 100% !important;
-  min-width: 20px;
+  overflow: hidden;
+  caret-color: #000000;
+  box-sizing: border-box;
 }
 textarea:focus {
   background: rgba(24, 144, 255, 0.08);

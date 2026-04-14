@@ -27,18 +27,22 @@
 
     <div class="divider"></div>
 
-    <div class="tool-group" v-if="selectedEl">
-      <div class="color-picker-wrapper">
-        <label>填充：</label>
-        <input 
-          type="color" 
-          :value="selectedEl.fill || '#000000'" 
-          @input="e => updateElementFill(e.target.value)" 
-        />
-      </div>
-      <button class="tool-btn delete-btn" @click="removeSelected">删除</button>
+   <div class="tool-group" v-if="selectedEl">
+  <!-- 只显示颜色选择器（非图片） -->
+  <template v-if="selectedEl.type !== 'image'">
+    <div class="color-picker-wrapper">
+      <label>填充：</label>
+      <input 
+        type="color" 
+        :value="selectedEl.fill || '#000000'" 
+        @input="e => updateElementFill(e.target.value)" 
+      />
     </div>
-    <div v-else class="hint">未选中元素</div>
+  </template>
+  
+  <button class="tool-btn delete-btn" @click="removeSelected">删除</button>
+</div>
+<div v-else class="hint">未选中元素</div>
 
     <div class="divider"></div>
 
@@ -155,7 +159,6 @@ const triggerUpload = () => {
 const handleFileUpload = async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-
   isUploading.value = true;
   try {
     const url = await uploadImageApi(file);
@@ -278,6 +281,28 @@ onMounted(() => {
 
 const toggleGrid = () => {
   store.canvasConfig.showGrid = !store.canvasConfig.showGrid
+}
+
+// 切换灰度
+const toggleGrayscale = () => {
+  if (!selectedEl.value || selectedEl.value.type !== 'image') return
+  record()
+  const newVal = !selectedEl.value.filters?.grayscale
+  updateSelected({ filters: { ...selectedEl.value.filters, grayscale: newVal } })
+}
+
+// 更新亮度
+const updateBrightness = (val) => {
+  if (!selectedEl.value || selectedEl.value.type !== 'image') return
+  record()
+  updateSelected({ filters: { ...selectedEl.value.filters, brightness: Number(val) } })
+}
+
+// 更新对比度
+const updateContrast = (val) => {
+  if (!selectedEl.value || selectedEl.value.type !== 'image') return
+  record()
+  updateSelected({ filters: { ...selectedEl.value.filters, contrast: Number(val) } })
 }
 </script>
 
@@ -498,5 +523,40 @@ const toggleGrid = () => {
   color: #94a3b8;
   font-size: 12px;
   padding: 0 8px;
+}
+.filter-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.slider-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.slider-wrapper input[type="range"] {
+  width: 80px;
+  height: 4px;
+  -webkit-appearance: none;
+  background: #e2e8f0;
+  border-radius: 2px;
+}
+
+.slider-wrapper input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  background: #3b82f6;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.tool-btn.active {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
 }
 </style>

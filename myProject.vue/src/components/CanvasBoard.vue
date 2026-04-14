@@ -42,7 +42,7 @@ useKeyboard()
 
 const onMouseDown = (e) => handleMouseDown(e, canvasRef.value)
 const onMouseMove = (e) => handleMouseMove(e, canvasRef.value)
-const onMouseUp = () => handleMouseUp()
+const onMouseUp = () => handleMouseUp(null, canvasRef.value)
 const onWheel = (e) => handleWheel(e, canvasRef.value)
 
 onMounted(() => {

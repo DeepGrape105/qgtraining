@@ -33,7 +33,7 @@ export function useKeyboard() {
     }
     if (isCtrl && e.key === 'a') {
       e.preventDefault()
-      selectAll()
+      store.selectedIds = store.elements.map(el => el.id)
     }
   }
 

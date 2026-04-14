@@ -43,16 +43,23 @@ export function useText() {
     editingId.value = null
   }
 
-  const addText = (initialText = '双击编辑') => {
+  // src/composables/useText.js
+
+  const addText = () => {
     record()
     const id = generateId('text')
-    store.elements.push({
+    const newText = {
       ...getBaseElement('text', id),
-      text: initialText,
-      fontSize: 20,
-      fontWeight: 'normal'
-    })
-    store.selection = id
+      text: '',
+      width: 200,
+      height: 40,
+      fill: '#000000',
+      strokeWidth: 0,        // 默认无边框
+      stroke: 'transparent'  // 边框透明
+    }
+    store.elements.push(newText)
+    store.selectedIds = [id]
+    startEditing(id)
   }
 
   return {

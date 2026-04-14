@@ -67,54 +67,102 @@ export function useCanvas() {
     const width = canvas.width
     const height = canvas.height
 
-    // 1. 清空整个画布
+    // 1. 清空画布
     ctx.clearRect(0, 0, width, height)
 
     // 2. 画背景色
     ctx.fillStyle = backgroundColor
     ctx.fillRect(0, 0, width, height)
 
-    // 3. 画无限网格（如果开启）
+    // 3. 画网格
     if (showGrid) {
       drawInfiniteGrid(ctx, offsetX, offsetY, scale, gridSize, width, height)
     }
 
-    // 4. 画所有图形
+    // 4. 画所有图形（不含选中框）
     ctx.save()
     ctx.translate(offsetX, offsetY)
     ctx.scale(scale, scale)
 
     const sortedElements = [...store.elements].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0))
     for (const el of sortedElements) {
-      Renderer.draw(ctx, el)
+      Renderer.draw(ctx, el, { skipHighlight: true })
     }
 
-    // 画框选矩形
+    // 5. 画框选矩形
     if (store.marqueeRect) {
       const rect = store.marqueeRect
-
-      ctx.save()
-      ctx.translate(offsetX, offsetY)
-      ctx.scale(scale, scale)
-
       ctx.strokeStyle = '#1890ff'
       ctx.lineWidth = 1.5 / scale
       ctx.setLineDash([5 / scale, 5 / scale])
       ctx.strokeRect(rect.x, rect.y, rect.width, rect.height)
-
       ctx.fillStyle = 'rgba(24, 144, 255, 0.1)'
       ctx.fillRect(rect.x, rect.y, rect.width, rect.height)
-
       ctx.setLineDash([])
-      ctx.restore()
     }
 
-    // 5. 画选中框
-    if (store.selection) {
-      const selectedEl = store.elements.find(el => el.id === store.selection)
-      if (selectedEl) {
-        Renderer.drawHighlight(ctx, selectedEl)
+    // 6. 画选中框：单选时画单个，多选时画整体包围盒
+    if (store.selectedIds.length === 1) {
+      // 单选：画单个元素的选中框
+      const el = store.elements.find(e => e.id === store.selectedIds[0])
+      if (el) {
+        Renderer.drawHighlight(ctx, el, scale)
       }
+    } else if (store.selectedIds.length > 1) {
+      // 多选：画整体包围盒
+      const selectedElements = store.elements.filter(el => store.selectedIds.includes(el.id))
+
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+      selectedElements.forEach(el => {
+        if (el.type === 'circle') {
+          minX = Math.min(minX, el.x - el.radius)
+          minY = Math.min(minY, el.y - el.radius)
+          maxX = Math.max(maxX, el.x + el.radius)
+          maxY = Math.max(maxY, el.y + el.radius)
+        } else if (el.type === 'triangle') {
+          el.points.forEach(p => {
+            minX = Math.min(minX, p.x)
+            minY = Math.min(minY, p.y)
+            maxX = Math.max(maxX, p.x)
+            maxY = Math.max(maxY, p.y)
+          })
+        } else {
+          minX = Math.min(minX, el.x)
+          minY = Math.min(minY, el.y)
+          maxX = Math.max(maxX, el.x + (el.width || 0))
+          maxY = Math.max(maxY, el.y + (el.height || 0))
+        }
+      })
+
+      const padding = 8 / scale
+      const w = maxX - minX
+      const h = maxY - minY
+
+      // 画虚线包围盒
+      ctx.strokeStyle = '#1890ff'
+      ctx.lineWidth = 2 / scale
+      ctx.setLineDash([5 / scale, 5 / scale])
+      ctx.strokeRect(minX - padding, minY - padding, w + padding * 2, h + padding * 2)
+
+      // 画四角手柄
+      ctx.setLineDash([])
+      ctx.fillStyle = '#ffffff'
+      ctx.strokeStyle = '#1890ff'
+      const handleSize = 10 / scale
+
+      const corners = [
+        { x: minX - padding, y: minY - padding },
+        { x: minX + w + padding, y: minY - padding },
+        { x: minX - padding, y: minY + h + padding },
+        { x: minX + w + padding, y: minY + h + padding }
+      ]
+
+      corners.forEach(corner => {
+        ctx.beginPath()
+        ctx.arc(corner.x, corner.y, handleSize / 2, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.stroke()
+      })
     }
 
     ctx.restore()

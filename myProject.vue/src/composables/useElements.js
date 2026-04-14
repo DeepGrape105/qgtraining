@@ -28,18 +28,16 @@ export function useElements() {
    * 获取基础元素属性（所有图形共用的）
    */
   const getBaseElement = (type, id) => ({
-    id,
-    type,
-    x: 100,
-    y: 100,
-    fill: '#1890ff',
-    stroke: '#000000',
-    backgroundColor: transparent,
-    strokeWidth: 1,
-    opacity: 1,
-    zIndex: store.elements.length + 1,
-    rotation: 0
-  })
+  id, type,
+  x: 100, y: 100,
+  fill: '#Fff',           // 文字默认黑色
+  backgroundColor: 'transparent',
+  stroke: '#000000',
+  strokeWidth: 1,
+  opacity: 1,
+  zIndex: store.elements.length + 1,
+  rotation: 0
+})
 
   /**
    * 添加矩形
@@ -73,20 +71,19 @@ export function useElements() {
   /**
    * 添加三角形
    */
-  const addTriangle = () => {
-    record()
-    const id = generateId('triangle')
-    const element = {
-      ...getBaseElement('triangle', id),
-      points: [
-        { x: 150, y: 50 },
-        { x: 100, y: 150 },
-        { x: 200, y: 150 }
-      ]
-    }
-    store.elements.push(element)
-    store.selection = id
-  }
+ const addTriangle = () => {
+  record()
+  const id = generateId('triangle')
+  store.elements.push({
+    ...getBaseElement('triangle', id),
+    points: [
+      { x: 150, y: 50 },
+      { x: 100, y: 150 },
+      { x: 200, y: 150 }
+    ]
+  })
+  store.selectedIds = [id]
+}
 
   /**
    * 添加图片
@@ -98,22 +95,32 @@ export function useElements() {
     record()
     const id = generateId('image')
 
-    //1.接受图片 URL 和可选的宽高参数，并限制最大宽度为 300
     const maxWidth = 300
-    let finalWidth = width || 200
-    let finalHeight = height || 200
+    const maxHeight = 300
 
-    //2.如果未提供宽高，则默认设置为 200x200，同时保持图片的原始宽高比进行缩放，防止图片过大
-    if (width > maxWidth) {
-      finalWidth = maxWidth
-      finalHeight = (height / width) * maxWidth
+    let finalWidth = width
+    let finalHeight = height
+
+    // 计算缩放比例，保持宽高比
+    if (width > maxWidth || height > maxHeight) {
+      const widthRatio = maxWidth / width
+      const heightRatio = maxHeight / height
+      const ratio = Math.min(widthRatio, heightRatio)
+
+      finalWidth = width * ratio
+      finalHeight = height * ratio
     }
 
     const element = {
       ...getBaseElement('image', id),
       url,
       width: finalWidth,
-      height: finalHeight
+      height: finalHeight,
+      filters: {
+        grayscale: false,
+        brightness: 0,
+        contrast: 0
+      }
     }
     store.elements.push(element)
     store.selection = id
