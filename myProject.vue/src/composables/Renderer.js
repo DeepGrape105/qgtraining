@@ -20,7 +20,6 @@ export default class Renderer {
       case 'image': this.drawImageElement(ctx, element); break
     }
 
-    // 如果没跳过，画选中框（但我们现在不用这里画了）
     if (!options.skipHighlight && store.selectedIds.includes(element.id)) {
       this.drawHighlight(ctx, element, store.viewport.scale)
     }
@@ -28,10 +27,6 @@ export default class Renderer {
     ctx.restore()
   }
 
-  /**
-   * 统一绘制矩形选中框 (Goodnotes 风格)
-   * 逻辑：无论什么形状，先计算出左上角(minX, minY)和宽高(w, h)
-   */
   static drawHighlight(ctx, el, scale) {
     let minX, minY, w, h
 
@@ -64,7 +59,7 @@ export default class Renderer {
     ctx.save()
     ctx.strokeStyle = '#1890ff'
     ctx.lineWidth = 2 / scale
-    ctx.setLineDash([]) // 实线
+    ctx.setLineDash([])
     ctx.strokeRect(minX - padding, minY - padding, w + padding * 2, h + padding * 2)
 
     ctx.fillStyle = '#ffffff'
@@ -88,20 +83,15 @@ export default class Renderer {
     ctx.restore()
   }
 
-  // --- 以下是基础图形绘制方法 ---
-
   static drawRect(ctx, el) {
-    // 先画背景色
     if (el.backgroundColor) {
       ctx.fillStyle = el.backgroundColor
       ctx.fillRect(el.x, el.y, el.width, el.height)
     }
-    // 再画填充色
     if (el.fill) {
       ctx.fillStyle = el.fill
       ctx.fillRect(el.x, el.y, el.width, el.height)
     }
-    // 最后画边框
     if (el.stroke && el.strokeWidth > 0) {
       const halfStroke = el.strokeWidth / 2
       ctx.strokeStyle = el.stroke
@@ -121,17 +111,14 @@ export default class Renderer {
     ctx.beginPath()
     ctx.arc(el.x, el.y, radius, 0, Math.PI * 2)
 
-    // 背景色
     if (el.backgroundColor && el.backgroundColor !== 'transparent') {
       ctx.fillStyle = el.backgroundColor
       ctx.fill()
     }
-    // 填充色
     if (el.fill) {
       ctx.fillStyle = el.fill
       ctx.fill()
     }
-    // 边框
     if (el.stroke && el.strokeWidth > 0 && el.stroke !== 'transparent') {
       ctx.strokeStyle = el.stroke
       ctx.lineWidth = el.strokeWidth
@@ -142,7 +129,6 @@ export default class Renderer {
   static drawTriangle(ctx, el) {
     if (!el.points || el.points.length < 3) return
 
-    // 如果无边框，直接用原始顶点
     if (!el.stroke || el.strokeWidth === 0 || el.stroke === 'transparent') {
       ctx.beginPath()
       ctx.moveTo(el.points[0].x, el.points[0].y)
@@ -161,7 +147,6 @@ export default class Renderer {
       return
     }
 
-    // 有边框：顶点向外扩展
     const halfStroke = el.strokeWidth / 2
     const points = el.points
     const cx = (points[0].x + points[1].x + points[2].x) / 3
@@ -183,17 +168,14 @@ export default class Renderer {
     ctx.lineTo(expandedPoints[2].x, expandedPoints[2].y)
     ctx.closePath()
 
-    // 背景色
     if (el.backgroundColor && el.backgroundColor !== 'transparent') {
       ctx.fillStyle = el.backgroundColor
       ctx.fill()
     }
-    // 填充色
     if (el.fill) {
       ctx.fillStyle = el.fill
       ctx.fill()
     }
-    // 边框
     ctx.strokeStyle = el.stroke
     ctx.lineWidth = el.strokeWidth
     ctx.stroke()
@@ -203,7 +185,6 @@ export default class Renderer {
     const { editingId } = useText()
     const text = String(el.text || '')
 
-    // 【需求4】空文本且不在编辑状态 → 不绘制，将高度重置为0隐藏
     if (text.trim() === '' && editingId.value !== el.id) {
       el.height = 0
       return
@@ -211,7 +192,7 @@ export default class Renderer {
 
     const fontSize = el.fontSize || 20
     const fontWeight = el.fontWeight || 'normal'
-    const fontFamily = 'Arial'
+    const fontFamily = el.fontFamily || 'Arial'
     ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`
     ctx.textBaseline = 'top'
 
@@ -220,16 +201,14 @@ export default class Renderer {
     const maxWidth = boxWidth - padding * 2
     const lineHeight = fontSize * 1.4
 
-    // 编辑状态下，即使为空也显示一个空格占位符，防止高度塌陷，让鼠标能闪烁
     const displayText = (editingId.value === el.id && text === '') ? ' ' : text
 
-    // 自动换行 + 识别回车换行
     const chars = displayText.split('')
     const lines = []
     let currentLine = ''
 
     for (let char of chars) {
-      if (char === '\n') { // 支持 Shift+Enter 手动换行
+      if (char === '\n') {
         lines.push(currentLine)
         currentLine = ''
         continue
@@ -237,7 +216,6 @@ export default class Renderer {
       const testLine = currentLine + char
       const metrics = ctx.measureText(testLine)
 
-      // 超过宽度，且当前行有字了，就折行
       if (metrics.width > maxWidth && currentLine.length > 0) {
         lines.push(currentLine)
         currentLine = char
@@ -245,12 +223,10 @@ export default class Renderer {
         currentLine = testLine
       }
     }
-    // 推入最后一行（或者以回车结尾产生的新空行）
     if (currentLine || text.endsWith('\n')) {
       lines.push(currentLine)
     }
 
-    // 保底：保证至少有一行的高度
     if (lines.length === 0 && editingId.value === el.id) {
       lines.push(' ')
     }
@@ -258,14 +234,12 @@ export default class Renderer {
     const neededHeight = lines.length * lineHeight + padding * 2
     const boxHeight = Math.max(neededHeight, fontSize + padding * 2)
 
-    // 1. 背景色
-    if (el.backgroundColor && el.backgroundColor !== 'transparent') {
+    if (el.backgroundColor && el.backgroundColor !== '#00000000') {
       ctx.fillStyle = el.backgroundColor
       ctx.fillRect(el.x, el.y, boxWidth, boxHeight)
     }
 
-    // 2. 画边框 (你要求加上的逻辑)
-    if (el.stroke && el.strokeWidth > 0 && el.stroke !== 'transparent') {
+    if (el.stroke && el.strokeWidth > 0 && el.stroke !== '#00000000') {
       const halfStroke = el.strokeWidth / 2
       ctx.strokeStyle = el.stroke
       ctx.lineWidth = el.strokeWidth
@@ -277,15 +251,102 @@ export default class Renderer {
       )
     }
 
-    // 3. 画文字（编辑中不画，让 TextEditor 显示）
     if (editingId.value !== el.id) {
-      ctx.fillStyle = el.fill || '#000000'
-      lines.forEach((line, index) => {
-        ctx.fillText(line, el.x + padding, el.y + padding + index * lineHeight)
-      })
-    }
+      const richText = el.richText || displayText
+      const segments = parseRichText(richText, el.fill || '#000000', fontSize, fontWeight, fontFamily)
 
-    // 4. 将算好的高度反馈给元素属性
+      if (segments.length === 0) {
+        ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`
+        ctx.fillStyle = el.fill || '#000000'
+        lines.forEach((line, index) => {
+          ctx.fillText(line, el.x + padding, el.y + padding + index * lineHeight)
+        })
+      } else {
+        let currentY = el.y + padding
+        let currentX = el.x + padding
+        let currentLineHeight = lineHeight
+
+        segments.forEach(seg => {
+          if (seg.text === '\n') {
+            currentY += currentLineHeight
+            currentX = el.x + padding
+            currentLineHeight = lineHeight
+            return
+          }
+
+          let fontStyle = ''
+          if (seg.bold) fontStyle += 'bold '
+          if (seg.italic) fontStyle += 'italic '
+          ctx.font = `${fontStyle}${seg.fontSize || fontSize}px ${seg.fontFamily || fontFamily}`
+          ctx.fillStyle = seg.color
+
+          const words = seg.text.split('')
+          let line = ''
+
+          for (let char of words) {
+            const testLine = line + char
+            const metrics = ctx.measureText(testLine)
+
+            if (metrics.width > maxWidth && line.length > 0) {
+              ctx.fillText(line, currentX, currentY)
+
+              if (seg.underline) {
+                const lineWidth = ctx.measureText(line).width
+                ctx.beginPath()
+                ctx.strokeStyle = seg.color
+                ctx.lineWidth = 1
+                ctx.moveTo(currentX, currentY + seg.fontSize * 1.1)
+                ctx.lineTo(currentX + lineWidth, currentY + seg.fontSize * 1.1)
+                ctx.stroke()
+              }
+
+              if (seg.strike) {
+                const lineWidth = ctx.measureText(line).width
+                ctx.beginPath()
+                ctx.strokeStyle = seg.color
+                ctx.lineWidth = 1
+                ctx.moveTo(currentX, currentY + seg.fontSize * 0.6)
+                ctx.lineTo(currentX + lineWidth, currentY + seg.fontSize * 0.6)
+                ctx.stroke()
+              }
+
+              line = char
+              currentY += currentLineHeight
+              currentX = el.x + padding
+              currentLineHeight = lineHeight
+            } else {
+              line = testLine
+            }
+          }
+
+          if (line) {
+            ctx.fillText(line, currentX, currentY)
+
+            if (seg.underline) {
+              const lineWidth = ctx.measureText(line).width
+              ctx.beginPath()
+              ctx.strokeStyle = seg.color
+              ctx.lineWidth = 1
+              ctx.moveTo(currentX, currentY + seg.fontSize * 1.1)
+              ctx.lineTo(currentX + lineWidth, currentY + seg.fontSize * 1.1)
+              ctx.stroke()
+            }
+
+            if (seg.strike) {
+              const lineWidth = ctx.measureText(line).width
+              ctx.beginPath()
+              ctx.strokeStyle = seg.color
+              ctx.lineWidth = 1
+              ctx.moveTo(currentX, currentY + seg.fontSize * 0.6)
+              ctx.lineTo(currentX + lineWidth, currentY + seg.fontSize * 0.6)
+              ctx.stroke()
+            }
+
+            currentX += ctx.measureText(line).width
+          }
+        })
+      }
+    }
     el.height = boxHeight
   }
 
@@ -301,13 +362,11 @@ export default class Renderer {
       this.imageCache.set(el.url, img)
     }
 
-    // 1. 背景色
     if (el.backgroundColor && el.backgroundColor !== 'transparent') {
       ctx.fillStyle = el.backgroundColor
       ctx.fillRect(el.x, el.y, el.width, el.height)
     }
 
-    // 2. 画图片
     if (img.complete) {
       let filter = 'none'
       if (el.filters) {
@@ -322,17 +381,15 @@ export default class Renderer {
       ctx.drawImage(img, el.x, el.y, el.width, el.height)
       ctx.filter = 'none'
     } else {
-      // 加载中占位符
       ctx.fillStyle = '#f0f0f0'
       ctx.fillRect(el.x, el.y, el.width, el.height)
       ctx.fillStyle = '#999'
       ctx.font = '12px Arial'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
-      ctx.fillText('加载中...', el.x + el.width / 2, el.y + el.height / 2)
+      ctx.fillText('...', el.x + el.width / 2, el.y + el.height / 2)
     }
 
-    // 3. 边框（向外）
     if (el.stroke && el.strokeWidth > 0 && el.stroke !== 'transparent') {
       const halfStroke = el.strokeWidth / 2
       ctx.strokeStyle = el.stroke
@@ -345,4 +402,66 @@ export default class Renderer {
       )
     }
   }
+}
+
+function parseRichText(html, defaultColor, defaultSize, defaultWeight, defaultFamily) {
+  const segments = []
+  let content = html.replace(/<\/?p>/g, '')
+  const tagStack = []
+  let currentText = ''
+
+  for (let i = 0; i < content.length; i++) {
+    if (content[i] === '<') {
+      if (currentText) {
+        segments.push({
+          text: currentText,
+          bold: tagStack.includes('strong') || tagStack.includes('b'),
+          italic: tagStack.includes('em') || tagStack.includes('i'),
+          underline: tagStack.includes('u'),
+          strike: tagStack.includes('del') || tagStack.includes('s'),
+          color: getColorFromStack(tagStack) || defaultColor,
+          fontSize: defaultSize,
+          fontFamily: defaultFamily
+        })
+        currentText = ''
+      }
+
+      const end = content.indexOf('>', i)
+      const tag = content.substring(i + 1, end)
+      i = end
+
+      if (tag.startsWith('/')) {
+        tagStack.pop()
+      } else {
+        tagStack.push(tag.split(' ')[0])
+      }
+    } else {
+      currentText += content[i]
+    }
+  }
+
+  if (currentText) {
+    segments.push({
+      text: currentText,
+      bold: tagStack.includes('strong') || tagStack.includes('b'),
+      italic: tagStack.includes('em') || tagStack.includes('i'),
+      underline: tagStack.includes('u'),
+      strike: tagStack.includes('del') || tagStack.includes('s'),
+      color: getColorFromStack(tagStack) || defaultColor,
+      fontSize: defaultSize,
+      fontFamily: defaultFamily
+    })
+  }
+
+  return segments
+}
+
+function getColorFromStack(stack) {
+  for (let tag of stack) {
+    if (tag.startsWith('span') && tag.includes('color')) {
+      const match = tag.match(/color:\s*([^;"]+)/)
+      if (match) return match[1]
+    }
+  }
+  return null
 }

@@ -10,11 +10,12 @@ export function usePersistence() {
 
   const initAutoSave = () => {
     watch(
-      () => store.elements,
-      (newElements) => {
+      () => [store.elements, store.canvasConfig, store.viewport],  // 监听 viewport
+      ([newElements, newConfig, newViewport]) => {
         const dataToSave = {
           elements: newElements,
-          canvasConfig: getConfig()
+          canvasConfig: newConfig,
+          viewport: newViewport  // 保存视口
         }
         localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave))
       },
@@ -28,7 +29,11 @@ export function usePersistence() {
       try {
         const parsedData = JSON.parse(savedData)
         if (parsedData) {
-          restoreState(parsedData.elements, parsedData.canvasConfig)
+          restoreState(
+            parsedData.elements,
+            parsedData.canvasConfig,
+            parsedData.viewport  // 恢复视口
+          )
         }
         console.log('[Persistence] 已恢复本地草稿')
       } catch (e) {

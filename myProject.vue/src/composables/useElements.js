@@ -31,7 +31,7 @@ export function useElements() {
   id, type,
   x: 100, y: 100,
   fill: '#Fff',           // 文字默认黑色
-  backgroundColor: 'transparent',
+  backgroundColor: '#00000000',
   stroke: '#000000',
   strokeWidth: 1,
   opacity: 1,
@@ -240,14 +240,18 @@ export function useElements() {
   /**
    * 批量替换元素和配置（用于持久化恢复）
    */
-  const restoreState = (elements, config) => {
+  const restoreState = (elements, config, viewport) => {
     if (elements !== undefined) {
       store.elements = elements
     }
     if (config !== undefined) {
       store.canvasConfig = config
     }
+    if (viewport !== undefined) {
+      store.viewport = viewport
+    }
   }
+
 
   const bringToFront = () => {
     const el = store.elements.find(e => e.id === store.selection);

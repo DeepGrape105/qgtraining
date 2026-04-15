@@ -12,12 +12,26 @@ export function useCanvas() {
     canvas = canvasEl
     ctx = canvas.getContext('2d')
 
-    // 画布占满整个容器
     const resizeCanvas = () => {
       const container = canvas.parentElement
-      canvas.width = container.clientWidth
-      canvas.height = container.clientHeight
+      const dpr = window.devicePixelRatio || 1
+
+      // 获取容器的逻辑尺寸
+      const width = container.clientWidth
+      const height = container.clientHeight
+
+      // 1. 设置画布的实际渲染像素（物理像素）
+      canvas.width = width * dpr
+      canvas.height = height * dpr
+
+      // 2. 通过 CSS 将画布缩放回原来的逻辑尺寸
+      canvas.style.width = width + 'px'
+      canvas.style.height = height + 'px'
+
+      // 3. 【关键】全局缩放上下文，后续所有的绘制代码依然按照逻辑坐标写，无需改动
+      ctx.scale(dpr, dpr)
     }
+
     window.addEventListener('resize', resizeCanvas)
     resizeCanvas()
   }
@@ -64,11 +78,17 @@ export function useCanvas() {
 
     const { backgroundColor, showGrid, gridSize } = store.canvasConfig
     const { offsetX, offsetY, scale } = store.viewport
-    const width = canvas.width
-    const height = canvas.height
 
-    // 1. 清空画布
-    ctx.clearRect(0, 0, width, height)
+    // 使用逻辑尺寸而不是物理像素尺寸
+    const width = canvas.clientWidth
+    const height = canvas.clientHeight
+
+    // 1. 清空画布 (注意：因为 initCanvas 里 scale(dpr) 了，这里清空需要覆盖物理范围)
+    // 最稳妥的方法是重置变换再清空，或者清空逻辑尺寸的超大范围
+    ctx.save()
+    ctx.setTransform(1, 0, 0, 1, 0, 0) // 重置所有变换
+    ctx.clearRect(0, 0, canvas.width, canvas.height) // 按物理像素清空
+    ctx.restore()
 
     // 2. 画背景色
     ctx.fillStyle = backgroundColor

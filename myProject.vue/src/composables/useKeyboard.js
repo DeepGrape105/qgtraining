@@ -2,11 +2,13 @@ import { onMounted, onUnmounted } from 'vue'
 import { useCanvasStore } from '../store/canvasStore'
 import { useElements } from './useElements'
 import { useHistory } from './useHistory'
+import { useText } from './useText'
 
 export function useKeyboard() {
   const store = useCanvasStore()
   const { copyElement, pasteElement, removeSelected } = useElements()
   const { undo, redo } = useHistory()
+  const { editingId } = useText()
 
   const handleKeyDown = (e) => {
     // 如果用户正在输入框编辑，禁用快捷键
@@ -29,6 +31,7 @@ export function useKeyboard() {
       pasteElement()
     }
     if (e.key === 'Delete' || e.key === 'Backspace') {
+      if (editingId.value) return  
       removeSelected()
     }
     if (isCtrl && e.key === 'a') {

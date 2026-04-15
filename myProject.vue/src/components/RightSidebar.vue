@@ -65,14 +65,55 @@
       <!-- 文字属性 -->
       <div class="prop-group" v-if="selectedEl.type === 'text'">
         <div class="group-title">文字属性</div>
+        
+        <!-- 内容 -->
         <div class="prop-row full">
           <label>内容</label>
           <textarea v-model="selectedEl.text" @change="onValueChange"></textarea>
         </div>
+        
+        <!-- 富文本样式 -->
+        <div class="prop-row" style="flex-wrap: wrap;">
+          <button @mousedown.prevent @click="applyTextStyle('bold')" :class="{ active: isStyleActive('bold') }">B</button>
+          <button @mousedown.prevent @click="applyTextStyle('italic')" :class="{ active: isStyleActive('italic') }">I</button>
+          <button @mousedown.prevent @click="applyTextStyle('underline')" :class="{ active: isStyleActive('underline') }">U</button>
+          <button @mousedown.prevent @click="applyTextStyle('strike')" :class="{ active: isStyleActive('strike') }">S</button>
+        </div>
+        
+        <!-- 字体 -->
+        <div class="prop-row">
+          <div class="input-item">
+            <label>字体</label>
+            <select v-model="selectedEl.fontFamily" @change="onValueChange">
+              <option value="Arial">Arial</option>
+              <option value="Georgia">Georgia</option>
+              <option value="'Microsoft YaHei'">微软雅黑</option>
+              <option value="'SimSun'">宋体</option>
+            </select>
+          </div>
+        </div>
+        
+        <!-- 字号 -->
         <div class="prop-row">
           <div class="input-item">
             <label>字号</label>
-            <input type="number" v-model.number="selectedEl.fontSize" @change="onValueChange" />
+            <input type="number" v-model.number="selectedEl.fontSize" @change="onValueChange" min="12" max="72" />
+          </div>
+        </div>
+        
+        <!-- 文字颜色 -->
+        <div class="prop-row">
+          <div class="input-item">
+            <label>文字颜色</label>
+            <input type="color" v-model="selectedEl.fill" @input="onValueChange" />
+          </div>
+        </div>
+        
+        <!-- 背景色 -->
+        <div class="prop-row">
+          <div class="input-item">
+            <label>背景色</label>
+            <input type="color" v-model="selectedEl.backgroundColor" @input="onValueChange" />
           </div>
         </div>
       </div>
@@ -97,23 +138,24 @@
       </div>
 
       <!-- 外观样式（所有类型都有） -->
+       
       <div class="prop-group">
-        <div class="group-title">外观样式</div>
-        
-        <div class="prop-row" v-if="selectedEl.type !== 'image'">
+        <div class="group-title">外观样式</div> 
+
+         <div class="prop-row">
           <div class="input-item">
-            <label>填充</label>
+            <label>填充颜色</label>
             <input type="color" v-model="selectedEl.fill" @input="onValueChange" />
           </div>
         </div>
-        
-        <div class="prop-row">
+
+         <div class="prop-row">
           <div class="input-item">
-            <label>背景色</label>
+            <label>背景颜色</label>
             <input type="color" v-model="selectedEl.backgroundColor" @input="onValueChange" />
           </div>
         </div>
-        
+
         <div class="prop-row">
           <div class="input-item">
             <label>边框颜色</label>
@@ -158,10 +200,12 @@ import { computed } from 'vue'
 import { useCanvasStore } from '../store/canvasStore'
 import { useElements } from '../composables/useElements'
 import { useHistory } from '../composables/useHistory'
+import { useText } from '../composables/useText'
 
 const store = useCanvasStore()
 const { removeSelected, updateElement } = useElements()
 const { record } = useHistory()
+const { editor } = useText()
 
 const selectedEl = computed(() => {
   const ids = store.selectedIds
@@ -187,7 +231,6 @@ const sendToBack = () => {
   selectedEl.value.zIndex = minZ - 1
 }
 
-// 三角形的中心点
 const triangleCenter = computed(() => {
   if (!selectedEl.value || selectedEl.value.type !== 'triangle') return { x: 0, y: 0 }
   const points = selectedEl.value.points
@@ -200,15 +243,41 @@ const triangleCenter = computed(() => {
 const updateTrianglePosition = (axis, value) => {
   if (!selectedEl.value || selectedEl.value.type !== 'triangle') return
   record()
-  
   const delta = Number(value) - triangleCenter.value[axis]
   const points = selectedEl.value.points
   const newPoints = points.map(p => ({
     x: p.x + delta,
     y: p.y + delta
   }))
-  
   updateElement(selectedEl.value.id, { points: newPoints })
+}
+
+const applyTextStyle = (style) => {
+  if (!selectedEl.value || selectedEl.value.type !== 'text') return
+  const el = selectedEl.value
+  let html = el.richText || el.text || ''
+  const tagMap = { bold: 'strong', italic: 'em', underline: 'u', strike: 'del' }
+  const tag = tagMap[style]
+  if (html.includes(`<${tag}>`)) {
+    html = html.replace(new RegExp(`<${tag}>(.*?)</${tag}>`, 'g'), '$1')
+  } else {
+    html = `<${tag}>${html}</${tag}>`
+  }
+  el.richText = html
+  el.text = html.replace(/<[^>]*>/g, '')
+  updateElement(el.id, { richText: html, text: el.text })
+  store.elements = [...store.elements]
+}
+
+const isStyleActive = (style) => {
+  if (!editor.value) return false
+  switch (style) {
+    case 'bold': return editor.value.isActive('bold')
+    case 'italic': return editor.value.isActive('italic')
+    case 'underline': return editor.value.isActive('underline')
+    case 'strike': return editor.value.isActive('strike')
+    default: return false
+  }
 }
 </script>
 
@@ -253,4 +322,18 @@ button:hover { background: #f0f0f0; }
 button.danger { grid-column: span 2; color: #ff4d4f; border-color: #ff4d4f; }
 button.danger:hover { background: #fff1f0; }
 .empty-state { padding: 40px 20px; text-align: center; color: #999; font-size: 14px; }
+.prop-row button {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: white;
+  font-weight: bold;
+  cursor: pointer;
+}
+.prop-row button.active {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
 </style>

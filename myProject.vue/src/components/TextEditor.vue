@@ -6,79 +6,60 @@
     @mousedown.stop 
     @click.stop
   >
-    <textarea
-      ref="inputRef"
-      v-model="editingText"
-      style="caret-color: #000000;"
-      @blur="onBlur"
-      @keydown.enter="onEnter"
-      @keydown.esc="cancel"
-      @input="onInput"
-    />
+    <editor-content :editor="editor" class="tiptap-wrapper" />
   </div>
 </template>
 
 <script setup>
-import { computed, ref, watch, nextTick } from 'vue'
+import { computed, watch, nextTick, onBeforeUnmount } from 'vue'
 import { useCanvasStore } from '../store/canvasStore'
 import { useText } from '../composables/useText'
 import { useHistory } from '../composables/useHistory'
+import { useEditor, EditorContent } from '@tiptap/vue-3'
+import StarterKit from '@tiptap/starter-kit'
 
 const store = useCanvasStore()
-const { editingId, editingText, saveText, cancelEditing } = useText()
+const { editingId, editingText, saveText, cancelEditing, setEditor } = useText()
 const { record } = useHistory()
-const inputRef = ref(null)
 
 let isReady = false
+
+const editor = useEditor({
+  content: '<p>双击编辑</p>',
+  extensions: [
+    StarterKit.configure({ underline: true, strike: true }),
+  ],
+  onUpdate: ({ editor }) => {
+    if (editingId.value) {
+      const el = store.elements.find(e => e.id === editingId.value)
+      if (el) {
+        const plainText = editor.state.doc.textBetween(0, editor.state.doc.content.size, '\n')
+        el.text = plainText
+        el.richText = editor.getHTML()
+        editingText.value = plainText
+      }
+    }
+  }
+})
+
+watch(editor, (val) => {
+  if (val) setEditor(val)
+}, { immediate: true })
 
 watch(editingId, async (id) => {
   if (id) {
     isReady = false
     await nextTick()
-    
-    setTimeout(() => {
-      inputRef.value?.focus()
-      inputRef.value?.select()
-      setTimeout(() => { isReady = true }, 100)
-    }, 50)
-  }
-})
-
-const textColor = computed(() => {
-  const el = store.elements.find(e => e.id === editingId.value)
-  return el?.fill || '#000000'
-})
-
-const autoResize = () => {
-  const el = inputRef.value
-  if (el) {
-    el.style.height = 'auto'
-    el.style.height = el.scrollHeight + 'px'
-  }
-}
-
-const onInput = () => {
-   if (editingId.value) {
-    const el = store.elements.find(e => e.id === editingId.value)
-    if (el) {
-      el.text = editingText.value
+    const el = store.elements.find(e => e.id === id)
+    if (editor.value && el) {
+      editor.value.commands.setContent(el.richText || el.text || '<p>双击编辑</p>')
+      setTimeout(() => {
+        editor.value.commands.focus('end')
+        setTimeout(() => { isReady = true }, 100)
+      }, 50)
     }
   }
-}
-
-const onBlur = () => {
-  if (!isReady) return
-  finish()
-}
-
-const onEnter = (e) => {
-  // Shift+Enter 换行，单独 Enter 保存
-  if (!e.shiftKey) {
-    e.preventDefault()
-    finish()
-  }
-}
-
+})
 
 const editorStyle = computed(() => {
   const el = store.elements.find(e => e.id === editingId.value)
@@ -94,21 +75,32 @@ const editorStyle = computed(() => {
     left: `${el.x * scale + offsetX}px`,
     top: `${el.y * scale + offsetY}px`,
     width: `${boxWidth}px`,
-    height: `${boxHeight}px`,
+    minHeight: `${boxHeight}px`,
     fontSize: `${fontSize}px`,
     color: el.fill || '#000000',
     fontWeight: el.fontWeight || 'normal',
-    fontFamily: 'Arial, sans-serif',
+    fontFamily: el.fontFamily || 'Arial, sans-serif',
+    backgroundColor: el.backgroundColor || '#00000000',
+    border: el.stroke && el.strokeWidth > 0 ? `${el.strokeWidth * scale}px solid ${el.stroke}` : 'none',
+    padding: `${(el.padding || 8) * scale}px`,
     zIndex: 9999,
-    pointerEvents: 'auto'
+    pointerEvents: 'auto',
+    boxSizing: 'border-box'
   }
 })
 
 const finish = () => {
-  if (!editingText.value || editingText.value.trim() === '') {
-    editingText.value = '双击编辑'
-    const el = store.elements.find(e => e.id === editingId.value)
-    if (el) el.text = editingText.value
+  if (!editingId.value) return
+  const el = store.elements.find(e => e.id === editingId.value)
+  if (el && editor.value) {
+    const plainText = editor.value.state.doc.textBetween(0, editor.value.state.doc.content.size, '\n')
+    if (!plainText || plainText.trim() === '') {
+      el.text = '双击编辑'
+      el.richText = '<p>双击编辑</p>'
+    } else {
+      el.text = plainText
+      el.richText = editor.value.getHTML()
+    }
   }
   record()
   saveText()
@@ -117,6 +109,19 @@ const finish = () => {
 const cancel = () => {
   cancelEditing()
 }
+
+window.addEventListener('keydown', (e) => {
+  if (!editingId.value) return
+  if (e.key === 'Escape') cancel()
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault()
+    finish()
+  }
+})
+
+onBeforeUnmount(() => {
+  if (editor.value) editor.value.destroy()
+})
 </script>
 
 <style scoped>
@@ -126,14 +131,17 @@ const cancel = () => {
   left: 0;
   padding: 0;
   margin: 0;
-  background: transparent;
 }
-textarea {
+.tiptap-wrapper {
   width: 100%;
   height: 100%;
-  border: none;
-  outline: none;
-  padding: 8px;
+}
+:deep(.ProseMirror) {
+  width: 100%;
+  min-height: 100%;
+  outline: none !important;
+  border: none !important;
+  padding: 0;
   margin: 0;
   background: transparent;
   color: inherit;
@@ -141,12 +149,15 @@ textarea {
   font-family: inherit;
   font-weight: inherit;
   line-height: 1.4;
-  resize: none;
-  overflow: hidden;
   caret-color: #000000;
   box-sizing: border-box;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
-textarea:focus {
+:deep(.ProseMirror p) {
+  margin: 0;
+}
+:deep(.ProseMirror:focus) {
   background: rgba(24, 144, 255, 0.08);
   border-radius: 4px;
 }

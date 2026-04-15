@@ -5,6 +5,7 @@ import { useViewport } from './useViewport'
 import { useHistory } from './useHistory'
 import { useText } from './useText'
 import { onMounted, onUnmounted } from 'vue'
+import { getMultiSelectionCenter, getDistance, getScaleFactor } from '../utils/math'
 
 let globalLastClickTime = 0
 let globalLastSelectedId = null
@@ -201,7 +202,18 @@ export function useInteraction() {
           isResizing = true
           resizeHandle = detectedHandle
           resizeStartPos = worldPos
-          resizeStartSize = { elements: JSON.parse(JSON.stringify(selectedElements)) }
+          resizeStartSize = {
+            elements: selectedElements.map(el => ({
+              id: el.id,
+              type: el.type,
+              x: el.x,
+              y: el.y,
+              radius: el.radius,
+              width: el.width,
+              height: el.height,
+              points: el.points ? JSON.parse(JSON.stringify(el.points)) : null
+            }))
+          }
           isDragging = false
           isPanning = false
           canvasEl.style.cursor = 'nwse-resize'
@@ -298,126 +310,25 @@ export function useInteraction() {
       const dx = worldPos.x - resizeStartPos.x
       const dy = worldPos.y - resizeStartPos.y
 
-      // 获取所有选中的元素
       const selectedElements = store.elements.filter(el => store.selectedIds.includes(el.id))
       if (selectedElements.length === 0) return
 
-      // ========== 多选缩放 ==========
       if (selectedElements.length > 1) {
-        // 计算包围盒中心
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
-        selectedElements.forEach(el => {
-          if (el.type === 'circle') {
-            minX = Math.min(minX, el.x - el.radius)
-            minY = Math.min(minY, el.y - el.radius)
-            maxX = Math.max(maxX, el.x + el.radius)
-            maxY = Math.max(maxY, el.y + el.radius)
-          } else if (el.type === 'triangle') {
-            el.points.forEach(p => {
-              minX = Math.min(minX, p.x)
-              minY = Math.min(minY, p.y)
-              maxX = Math.max(maxX, p.x)
-              maxY = Math.max(maxY, p.y)
-            })
-          } else {
-            minX = Math.min(minX, el.x)
-            minY = Math.min(minY, el.y)
-            maxX = Math.max(maxX, el.x + (el.width || 0))
-            maxY = Math.max(maxY, el.y + (el.height || 0))
-          }
-        })
-
-        const cx = (minX + maxX) / 2
-        const cy = (minY + maxY) / 2
-
-        // 计算缩放比例
-        const startDist = Math.sqrt(Math.pow(resizeStartPos.x - cx, 2) + Math.pow(resizeStartPos.y - cy, 2))
-        const currentDist = Math.max(10, startDist + (dx + dy) / 2)
-        const scaleFactor = Math.max(0.3, Math.min(3, currentDist / startDist))
-
-        // 缩放所有选中元素
-        selectedElements.forEach(el => {
-          if (el.type === 'circle') {
-            const newRadius = Math.max(5, el.radius * scaleFactor)
-            const newX = cx + (el.x - cx) * scaleFactor
-            const newY = cy + (el.y - cy) * scaleFactor
-            updateElement(el.id, { radius: newRadius, x: newX, y: newY })
-          } else if (el.type === 'triangle') {
-            const newPoints = el.points.map(p => ({
-              x: cx + (p.x - cx) * scaleFactor,
-              y: cy + (p.y - cy) * scaleFactor
-            }))
-            updateElement(el.id, { points: newPoints })
-          } else {
-            const newWidth = Math.max(10, (el.width || 0) * scaleFactor)
-            const newHeight = Math.max(10, (el.height || 0) * scaleFactor)
-            const newX = cx + (el.x - cx) * scaleFactor
-            const newY = cy + (el.y - cy) * scaleFactor
-            updateElement(el.id, { width: newWidth, height: newHeight, x: newX, y: newY })
-          }
-        })
-        return
-      }
-
-      // ========== 单选缩放（原有逻辑，完全不动） ==========
-      const element = selectedElements[0]
-
-      if (element.type === 'circle') {
-        const scaleFactor = 1 + (dx + dy) / (element.radius * 2)
-        const newRadius = Math.max(10, (resizeStartSize.radius || element.radius) * scaleFactor)
-        updateElement(element.id, { radius: newRadius })
-      } else if (element.type === 'triangle') {
-        const points = resizeStartSize.points || element.points
-
-        if (resizeHandle === 'br') {
-          const cx = (points[0].x + points[1].x + points[2].x) / 3
-          const cy = (points[0].y + points[1].y + points[2].y) / 3
-          const startDist = Math.sqrt(Math.pow(points[0].x - cx, 2) + Math.pow(points[0].y - cy, 2))
-          const currentDist = Math.max(10, startDist + (dx + dy) / 2)
-          const scaleFactor = Math.max(0.3, Math.min(3, currentDist / startDist))
-
-          updateElement(element.id, {
-            points: points.map(p => ({
-              x: cx + (p.x - cx) * scaleFactor,
-              y: cy + (p.y - cy) * scaleFactor
-            }))
-          })
-        } else {
-          const newPoints = [...points]
-          const index = { tl: 0, tr: 1, bl: 2 }[resizeHandle]
-          if (index !== undefined) {
-            newPoints[index] = { x: points[index].x + dx, y: points[index].y + dy }
-            updateElement(element.id, { points: newPoints })
-          }
-        }
+        handleMultiResize(worldPos, selectedElements, resizeStartPos, resizeStartSize)
       } else {
-        let newWidth = resizeStartSize.width
-        let newHeight = resizeStartSize.height
-        let newX = resizeStartSize.x
-        let newY = resizeStartSize.y
-
-        if (resizeHandle?.includes('r')) newWidth = Math.max(20, resizeStartSize.width + dx)
-        if (resizeHandle?.includes('l')) {
-          newWidth = Math.max(20, resizeStartSize.width - dx)
-          newX = resizeStartSize.x + dx
+        const element = selectedElements[0]
+        if (element.type === 'circle') {
+          handleCircleResize(element, worldPos, resizeStartSize)
+        } else if (element.type === 'triangle') {
+          handleTriangleResize(element, worldPos, dx, dy, resizeHandle, resizeStartSize)
+        } else {
+          handleRectResize(element, dx, dy, resizeHandle, resizeStartSize)
         }
-        if (resizeHandle?.includes('b')) newHeight = Math.max(20, resizeStartSize.height + dy)
-        if (resizeHandle?.includes('t')) {
-          newHeight = Math.max(20, resizeStartSize.height - dy)
-          newY = resizeStartSize.y + dy
-        }
-
-        updateElement(element.id, {
-          width: newWidth,
-          height: newHeight,
-          x: newX,
-          y: newY
-        })
       }
       return
     }
 
-    // ========== 以下代码完全不动 ==========
+    // 框选
     if (isMarqueeSelecting) {
       const worldPos = getWorldCoords(e, canvasEl)
       marqueeEnd = worldPos
@@ -453,10 +364,7 @@ export function useInteraction() {
               points: el.points.map(p => ({ x: p.x + worldDx, y: p.y + worldDy }))
             })
           } else {
-            updateElement(id, {
-              x: el.x + worldDx,
-              y: el.y + worldDy
-            })
+            updateElement(id, { x: el.x + worldDx, y: el.y + worldDy })
           }
         }
       })
@@ -530,6 +438,117 @@ export function useInteraction() {
     isDragging = false
     isPanning = false
     if (canvasEl) canvasEl.style.cursor = 'default'
+  }
+  // ========== 单选缩放函数 ==========
+
+  const handleCircleResize = (element, worldPos, resizeStartSize) => {
+    const startDist = resizeStartSize.radius || element.radius
+    const currentDist = getDistance(worldPos, { x: element.x, y: element.y })
+    const scaleFactor = getScaleFactor(startDist, currentDist)
+    updateElement(element.id, { radius: Math.max(10, startDist * scaleFactor) })
+  }
+
+  const handleTriangleResize = (element, worldPos, dx, dy, resizeHandle, resizeStartSize) => {
+    const points = resizeStartSize.points || element.points
+
+    if (resizeHandle === 'br') {
+      const cx = (points[0].x + points[1].x + points[2].x) / 3
+      const cy = (points[0].y + points[1].y + points[2].y) / 3
+      const startDist = getDistance(points[0], { x: cx, y: cy })
+      const currentDist = getDistance(worldPos, { x: cx, y: cy })
+      const scaleFactor = getScaleFactor(startDist, currentDist)
+
+      updateElement(element.id, {
+        points: points.map(p => ({
+          x: cx + (p.x - cx) * scaleFactor,
+          y: cy + (p.y - cy) * scaleFactor
+        }))
+      })
+    } else {
+      const newPoints = [...points]
+      const index = { tl: 0, tr: 1, bl: 2 }[resizeHandle]
+      if (index !== undefined) {
+        newPoints[index] = { x: points[index].x + dx, y: points[index].y + dy }
+        updateElement(element.id, { points: newPoints })
+      }
+    }
+  }
+
+  const handleRectResize = (element, dx, dy, resizeHandle, resizeStartSize) => {
+    let newWidth = resizeStartSize.width
+    let newHeight = resizeStartSize.height
+    let newX = resizeStartSize.x
+    let newY = resizeStartSize.y
+
+    if (resizeHandle?.includes('r')) newWidth = Math.max(20, resizeStartSize.width + dx)
+    if (resizeHandle?.includes('l')) {
+      newWidth = Math.max(20, resizeStartSize.width - dx)
+      newX = resizeStartSize.x + dx
+    }
+    if (resizeHandle?.includes('b')) newHeight = Math.max(20, resizeStartSize.height + dy)
+    if (resizeHandle?.includes('t')) {
+      newHeight = Math.max(20, resizeStartSize.height - dy)
+      newY = resizeStartSize.y + dy
+    }
+
+    updateElement(element.id, {
+      width: newWidth,
+      height: newHeight,
+      x: newX,
+      y: newY
+    })
+  }
+
+  const handleMultiResize = (worldPos, selectedElements, resizeStartPos, resizeStartSize) => {
+    const { cx, cy } = getMultiSelectionCenter(selectedElements)
+
+    const startDist = getDistance(resizeStartPos, { x: cx, y: cy })
+    const currentDist = getDistance(worldPos, { x: cx, y: cy })
+    const scaleFactor = getScaleFactor(startDist, currentDist, 0.5, 2)
+
+    const startElements = resizeStartSize.elements
+    selectedElements.forEach(el => {
+      const startEl = startElements.find(e => e.id === el.id)
+      if (!startEl) return
+
+      if (el.type === 'circle') {
+        updateElement(el.id, {
+          radius: Math.max(5, startEl.radius * scaleFactor),
+          x: cx + (startEl.x - cx) * scaleFactor,  // 位置也缩放
+          y: cy + (startEl.y - cy) * scaleFactor
+        })
+      } else if (el.type === 'triangle') {
+        const points = startEl.points
+        const tcx = (points[0].x + points[1].x + points[2].x) / 3
+        const tcy = (points[0].y + points[1].y + points[2].y) / 3
+
+        // 先缩放顶点
+        const scaledPoints = points.map(p => ({
+          x: tcx + (p.x - tcx) * scaleFactor,
+          y: tcy + (p.y - tcy) * scaleFactor
+        }))
+
+        // 再整体移动（相对于包围盒中心）
+        const newTcx = cx + (tcx - cx) * scaleFactor
+        const newTcy = cy + (tcy - cy) * scaleFactor
+        const deltaX = newTcx - tcx
+        const deltaY = newTcy - tcy
+
+        updateElement(el.id, {
+          points: scaledPoints.map(p => ({
+            x: p.x + deltaX,
+            y: p.y + deltaY
+          }))
+        })
+      } else {
+        updateElement(el.id, {
+          width: Math.max(10, startEl.width * scaleFactor),
+          height: Math.max(10, startEl.height * scaleFactor),
+          x: cx + (startEl.x - cx) * scaleFactor,
+          y: cy + (startEl.y - cy) * scaleFactor
+        })
+      }
+    })
   }
 
   const handleWheel = (e, canvasEl) => {

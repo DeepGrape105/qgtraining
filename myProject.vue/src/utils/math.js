@@ -123,3 +123,50 @@ export function isElementInRect(element, rect) {
     elRect.y + elRect.height < rect.y ||
     rect.y + rect.height < elRect.y)
 }
+
+/**
+ * 计算多选元素的包围盒中心
+ */
+export function getMultiSelectionCenter(elements) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+
+  elements.forEach(el => {
+    if (el.type === 'circle') {
+      minX = Math.min(minX, el.x - el.radius)
+      minY = Math.min(minY, el.y - el.radius)
+      maxX = Math.max(maxX, el.x + el.radius)
+      maxY = Math.max(maxY, el.y + el.radius)
+    } else if (el.type === 'triangle') {
+      el.points.forEach(p => {
+        minX = Math.min(minX, p.x)
+        minY = Math.min(minY, p.y)
+        maxX = Math.max(maxX, p.x)
+        maxY = Math.max(maxY, p.y)
+      })
+    } else {
+      minX = Math.min(minX, el.x)
+      minY = Math.min(minY, el.y)
+      maxX = Math.max(maxX, el.x + (el.width || 0))
+      maxY = Math.max(maxY, el.y + (el.height || 0))
+    }
+  })
+
+  return {
+    cx: (minX + maxX) / 2,
+    cy: (minY + maxY) / 2
+  }
+}
+
+/**
+ * 计算两点之间的距离
+ */
+export function getDistance(p1, p2) {
+  return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2))
+}
+
+/**
+ * 计算缩放比例
+ */
+export function getScaleFactor(startDist, currentDist, min = 0.3, max = 3) {
+  return Math.max(min, Math.min(max, currentDist / startDist))
+}
