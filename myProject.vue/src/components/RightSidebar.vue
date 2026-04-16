@@ -106,8 +106,8 @@
         <!-- 背景色 -->
         <div class="prop-row">
           <div class="input-item">
-            <label>背景色</label>
-            <input type="color" :value="editor?.getAttributes('highlight').color || '#00000000'" @input="e => setTextBackground(e.target.value)" />
+            <label>高亮</label>
+            <input type="color" :value="editor?.getAttributes('highlight').color || '#ffffff'" @input="e => setTextBackground(e.target.value)" />
           </div>
         </div>
 
@@ -137,14 +137,14 @@
       <div class="prop-group">
         <div class="group-title">外观样式</div> 
 
-         <div class="prop-row" v-if="selectedEl.type !== 'text'">
+         <div class="prop-row">
           <div class="input-item">
             <label>填充颜色</label>
             <input type="color" v-model="selectedEl.fill" @input="onValueChange" />
           </div>
         </div>
 
-         <div class="prop-row" v-if="selectedEl.type !== 'text'">
+         <div class="prop-row">
           <div class="input-item">
             <label>背景颜色</label>
             <input type="color" v-model="selectedEl.backgroundColor" @input="onValueChange" />
@@ -280,7 +280,11 @@ const setTextColor = (color) => {
 // 设置选中文字背景色
 const setTextBackground = (color) => {
   if (!editor.value || !editingId.value) return
-  editor.value.chain().focus().setHighlight({ color }).run()
+  // 把纯色转成半透明
+  const rgba = color.startsWith('#') 
+    ? `rgba(${parseInt(color.slice(1,3),16)}, ${parseInt(color.slice(3,5),16)}, ${parseInt(color.slice(5,7),16)}, 0.5)`
+    : color
+  editor.value.chain().focus().setHighlight({ color: rgba }).run()
 }
 
 const isStyleActive = (type) => {

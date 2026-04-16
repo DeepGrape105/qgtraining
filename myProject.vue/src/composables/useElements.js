@@ -289,6 +289,18 @@ export function useElements() {
     }
   }
 
+  const rotateElement = (id, angle) => {
+    const el = store.elements.find(e => e.id === id)
+    if (!el) return
+    el.rotation = (el.rotation || 0) + angle
+  }
+
+  const rotateSelected = (angle) => {
+    store.selectedIds.forEach(id => {
+      rotateElement(id, angle)
+    })
+  }
+
   return {
     // 内部工具函数
     generateId,
@@ -326,5 +338,8 @@ export function useElements() {
     toggleVisible,
     //选中操作
     toggleSelection
+    //旋转
+    rotateElement,
+    rotateSelected
   }
 }

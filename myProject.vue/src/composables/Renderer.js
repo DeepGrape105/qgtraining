@@ -355,6 +355,7 @@ export default class Renderer {
             ctx.fillRect(currentX, currentY, wordWidth, fontSize);
           }
 
+          
           ctx.fillStyle = seg.color;
           ctx.fillText(word, currentX, currentY);
 

@@ -42,7 +42,12 @@ onBeforeUnmount(() => {
 })
 
 const editor = useEditor({
-  extensions: [StarterKit, Underline, TextStyle, Color, Bold, Italic, Highlight],
+  extensions: [StarterKit, Underline, TextStyle, Color, Bold, Italic,Highlight.configure({
+      multicolor: true,  // 允许多种颜色
+      HTMLAttributes: {
+        class: 'highlight',
+      },
+    }),],
   onUpdate: ({ editor }) => {
   if (isUpdatingFromStore.value || !isReady.value) return
   const el = store.elements.find(e => e.id === editingId.value)
@@ -193,7 +198,7 @@ const editorStyle = computed(() => {
   display: inline;
 }
 :deep(.ProseMirror mark) {
-  background-color: #ffff00;
+  background-color: inherit;  /* 继承你设置的颜色 */
   padding: 0;
 }
 </style>
