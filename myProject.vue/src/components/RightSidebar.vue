@@ -66,18 +66,12 @@
       <div class="prop-group" v-if="selectedEl.type === 'text'">
         <div class="group-title">文字属性</div>
         
-        <!-- 内容 -->
-        <div class="prop-row full">
-          <label>内容</label>
-          <textarea v-model="selectedEl.text" @change="onValueChange"></textarea>
-        </div>
-        
         <!-- 富文本样式 -->
         <div class="prop-row" style="flex-wrap: wrap;">
-          <button @mousedown.prevent @click="applyTextStyle('bold')" :class="{ active: isStyleActive('bold') }">B</button>
-          <button @mousedown.prevent @click="applyTextStyle('italic')" :class="{ active: isStyleActive('italic') }">I</button>
-          <button @mousedown.prevent @click="applyTextStyle('underline')" :class="{ active: isStyleActive('underline') }">U</button>
-          <button @mousedown.prevent @click="applyTextStyle('strike')" :class="{ active: isStyleActive('strike') }">S</button>
+          <button @mousedown.prevent @click="applyTextStyle('bold')" :class="{ 'active': editor?.isActive('bold') }">B</button>
+          <button @mousedown.prevent @click="applyTextStyle('italic')" :class="{ 'active': editor?.isActive('italic') }">I</button>
+          <button @mousedown.prevent @click="applyTextStyle('underline')" :class="{ 'active': editor?.isActive('underline') }">U</button>
+          <button @mousedown.prevent @click="applyTextStyle('strike')" :class="{ 'active': editor?.isActive('strike') }">S</button>
         </div>
         
         <!-- 字体 -->
@@ -196,7 +190,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed , ref} from 'vue'
 import { useCanvasStore } from '../store/canvasStore'
 import { useElements } from '../composables/useElements'
 import { useHistory } from '../composables/useHistory'
@@ -205,7 +199,8 @@ import { useText } from '../composables/useText'
 const store = useCanvasStore()
 const { removeSelected, updateElement } = useElements()
 const { record } = useHistory()
-const { editor } = useText()
+const { editor, editingId, activeStyles } = useText()
+const styleUpdateKey = ref(0)
 
 const selectedEl = computed(() => {
   const ids = store.selectedIds
@@ -252,32 +247,32 @@ const updateTrianglePosition = (axis, value) => {
   updateElement(selectedEl.value.id, { points: newPoints })
 }
 
-const applyTextStyle = (style) => {
-  if (!selectedEl.value || selectedEl.value.type !== 'text') return
-  const el = selectedEl.value
-  let html = el.richText || el.text || ''
-  const tagMap = { bold: 'strong', italic: 'em', underline: 'u', strike: 'del' }
-  const tag = tagMap[style]
-  if (html.includes(`<${tag}>`)) {
-    html = html.replace(new RegExp(`<${tag}>(.*?)</${tag}>`, 'g'), '$1')
-  } else {
-    html = `<${tag}>${html}</${tag}>`
+// 修改 RightSidebar.vue 中的 applyTextStyle 函数
+const applyTextStyle = (type) => {
+  if (!editor.value || !editingId.value) return
+  
+  const chain = editor.value.chain().focus()
+  if (type === 'bold') chain.toggleBold().run()
+  else if (type === 'italic') chain.toggleItalic().run()
+  else if (type === 'underline') chain.toggleUnderline().run()
+  else if (type === 'strike') chain.toggleStrike().run()
+  
+  // 🌟 核心修复：修改样式后立即更新 richText 并强制重算高度
+  if (selectedEl.value) {
+    selectedEl.value.richText = editor.value.getHTML()
+    
+    // 强制触发一次 Canvas 的高度计算逻辑
+    const tempCtx = document.createElement('canvas').getContext('2d')
+    // 调用你的渲染器方法，确保 el.height 被物理更新
+    TextRenderer.drawText(tempCtx, selectedEl.value) 
+    
+    onValueChange() 
   }
-  el.richText = html
-  el.text = html.replace(/<[^>]*>/g, '')
-  updateElement(el.id, { richText: html, text: el.text })
-  store.elements = [...store.elements]
 }
 
-const isStyleActive = (style) => {
-  if (!editor.value) return false
-  switch (style) {
-    case 'bold': return editor.value.isActive('bold')
-    case 'italic': return editor.value.isActive('italic')
-    case 'underline': return editor.value.isActive('underline')
-    case 'strike': return editor.value.isActive('strike')
-    default: return false
-  }
+const isStyleActive = (type) => {
+  if (!editor.value) return false  // ← 加这行
+  return editor.value.isActive(type)
 }
 </script>
 

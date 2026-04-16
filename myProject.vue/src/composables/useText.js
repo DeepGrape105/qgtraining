@@ -7,6 +7,12 @@ import { useHistory } from './useHistory'
 const editingId = ref(null)
 const editingText = ref('')
 const editor = ref(null)
+const activeStyles = ref({
+  bold: false,
+  italic: false,
+  underline: false,
+  strike: false
+})
 
 export function useText() {
   const store = useCanvasStore()
@@ -28,13 +34,22 @@ export function useText() {
   /**
    * 保存并退出
    */
+  // src/composables/useText.js
   const saveText = () => {
     if (!editingId.value) return
     const el = store.elements.find(e => e.id === editingId.value)
-    if (el) {
-      el.text = editingText.value
+
+    // 🌟 从编辑器获取最新内容
+    if (editor.value) {
+      el.richText = editor.value.getHTML()
+      el.text = editor.value.state.doc.textBetween(0, editor.value.state.doc.content.size, '\n')
     }
+
     editingId.value = null
+    editingText.value = ''
+
+    // 🌟 强制画布重绘，让高度重新计算
+    store.elements = [...store.elements]
   }
 
   /**
@@ -67,6 +82,11 @@ export function useText() {
   const setEditor = (editorInstance) => {
     editor.value = editorInstance
   }
+
+  const updateActiveStyles = (styles) => {
+    activeStyles.value = { ...activeStyles.value, ...styles }
+  }
+
   return {
     addText,
     editingId,
@@ -75,6 +95,8 @@ export function useText() {
     saveText,
     cancelEditing,
     editor,
-  setEditor
+    setEditor,
+    updateActiveStyles,
+    activeStyles
   }
 }

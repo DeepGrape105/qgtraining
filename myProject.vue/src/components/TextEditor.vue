@@ -1,62 +1,98 @@
 <template>
-  <div 
-    v-if="editingId" 
-    class="text-editor-overlay" 
-    :style="editorStyle"
-    @mousedown.stop 
-    @click.stop
-  >
-    <editor-content :editor="editor" class="tiptap-wrapper" />
+  <div v-if="editingId" class="text-editor-overlay" :style="editorStyle" ref="editorContainerRef">
+    <div class="editor-container" @mousedown.stop>
+      <editor-content :editor="editor" class="tiptap-wrapper" />
+    </div>
   </div>
 </template>
 
 <script setup>
-import { computed, watch, nextTick, onBeforeUnmount } from 'vue'
+import { computed, watch, nextTick, onBeforeUnmount, ref, onMounted } from 'vue'
 import { useCanvasStore } from '../store/canvasStore'
 import { useText } from '../composables/useText'
-import { useHistory } from '../composables/useHistory'
 import { useEditor, EditorContent } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
+import Underline from '@tiptap/extension-underline'
+import { TextStyle } from '@tiptap/extension-text-style'
+import Color from '@tiptap/extension-color'
+import Bold from '@tiptap/extension-bold'
+import Italic from '@tiptap/extension-italic'
 
 const store = useCanvasStore()
-const { editingId, editingText, saveText, cancelEditing, setEditor } = useText()
-const { record } = useHistory()
+const { setEditor, updateActiveStyles, editingId, saveText } = useText()
 
-let isReady = false
+const isReady = ref(false)
+const isUpdatingFromStore = ref(false)
+const editorContainerRef = ref(null)
+
+const handleOutsideClick = (e) => {
+  if (editingId.value && editorContainerRef.value) {
+    const sidebar = document.querySelector('.right-sidebar')
+    if (sidebar && sidebar.contains(e.target)) return 
+    if (!editorContainerRef.value.contains(e.target)) saveText()
+  }
+}
+
+onMounted(() => window.addEventListener('mousedown', handleOutsideClick, true))
+onBeforeUnmount(() => {
+  window.removeEventListener('mousedown', handleOutsideClick, true)
+  if (editor.value) editor.value.destroy()
+})
 
 const editor = useEditor({
-  content: '<p>双击编辑</p>',
-  extensions: [
-    StarterKit.configure({ underline: true, strike: true }),
-  ],
+  extensions: [StarterKit, Underline, TextStyle, Color, Bold, Italic],
   onUpdate: ({ editor }) => {
-    if (editingId.value) {
-      const el = store.elements.find(e => e.id === editingId.value)
-      if (el) {
-        const plainText = editor.state.doc.textBetween(0, editor.state.doc.content.size, '\n')
-        el.text = plainText
-        el.richText = editor.getHTML()
-        editingText.value = plainText
-      }
-    }
+  if (isUpdatingFromStore.value || !isReady.value) return
+  const el = store.elements.find(e => e.id === editingId.value)
+  if (el) {
+    el.richText = editor.getHTML()
+    el.text = editor.state.doc.textBetween(0, editor.state.doc.content.size, '\n')
+    
+    // 🌟🌟🌟 只加这一行 🌟🌟🌟
+    el.height = 0  // 强制让 drawText 重新计算
+    store.elements = [...store.elements]
+  }
+},
+  onSelectionUpdate: ({ editor }) => {
+    if (!isReady.value) return
+    updateActiveStyles({
+      bold: editor.isActive('bold'),
+      italic: editor.isActive('italic'),
+      underline: editor.isActive('underline'),
+      strike: editor.isActive('strike')
+    })
   }
 })
 
-watch(editor, (val) => {
-  if (val) setEditor(val)
-}, { immediate: true })
+watch(editor, (val) => { if (val) setEditor(val) }, { immediate: true })
+
+// 监听属性面板（如字号、颜色）同步到编辑器
+watch(
+  () => {
+    const el = store.elements.find(e => e.id === editingId.value)
+    if (!el) return null
+    return JSON.stringify({ html: el.richText, fill: el.fill, size: el.fontSize, font: el.fontFamily })
+  },
+  () => {
+    if (!editor.value || !editingId.value || !isReady.value) return
+    const el = store.elements.find(e => e.id === editingId.value)
+    if (!el) return
+    if (el.richText !== editor.value.getHTML()) {
+      isUpdatingFromStore.value = true
+      editor.value.commands.setContent(el.richText || '', false)
+      nextTick(() => { isUpdatingFromStore.value = false })
+    }
+  }
+)
 
 watch(editingId, async (id) => {
   if (id) {
-    isReady = false
-    await nextTick()
+    isReady.value = false
     const el = store.elements.find(e => e.id === id)
     if (editor.value && el) {
-      editor.value.commands.setContent(el.richText || el.text || '<p>双击编辑</p>')
-      setTimeout(() => {
-        editor.value.commands.focus('end')
-        setTimeout(() => { isReady = true }, 100)
-      }, 50)
+      editor.value.commands.setContent(el.richText || el.text || '')
+      await nextTick()
+      setTimeout(() => { editor.value.commands.focus('end'); isReady.value = true }, 50)
     }
   }
 })
@@ -64,101 +100,41 @@ watch(editingId, async (id) => {
 const editorStyle = computed(() => {
   const el = store.elements.find(e => e.id === editingId.value)
   if (!el) return { display: 'none' }
-
   const { offsetX, offsetY, scale } = store.viewport
-  const fontSize = (el.fontSize || 20) * scale
-  const boxWidth = (el.width || 200) * scale
-  const boxHeight = (el.height || 40) * scale
-  
+  const p = el.padding || 8
   return {
     position: 'absolute',
-    left: `${el.x * scale + offsetX}px`,
-    top: `${el.y * scale + offsetY}px`,
-    width: `${boxWidth}px`,
-    minHeight: `${boxHeight}px`,
-    fontSize: `${fontSize}px`,
+    left: `${(el.x + p) * scale + offsetX}px`,
+    top: `${(el.y + p) * scale + offsetY}px`,
+    width: `${(el.width - p * 2) * scale}px`,
+    minHeight: `${(el.height - p * 2) * scale}px`,
+    fontSize: `${(el.fontSize || 20) * scale}px`,
     color: el.fill || '#000000',
-    fontWeight: el.fontWeight || 'normal',
     fontFamily: el.fontFamily || 'Arial, sans-serif',
-    backgroundColor: el.backgroundColor || '#00000000',
-    border: el.stroke && el.strokeWidth > 0 ? `${el.strokeWidth * scale}px solid ${el.stroke}` : 'none',
-    padding: `${(el.padding || 8) * scale}px`,
-    zIndex: 9999,
-    pointerEvents: 'auto',
-    boxSizing: 'border-box'
+    lineHeight: '1.4', 
+    zIndex: 10000,
+    boxSizing: 'border-box',
+    outline: 'none',
+    pointerEvents: 'auto'
+    // 🌟 重点：删除了 fontWeight 和 fontStyle，让 TipTap 内部标签自己控制
   }
-})
-
-const finish = () => {
-  if (!editingId.value) return
-  const el = store.elements.find(e => e.id === editingId.value)
-  if (el && editor.value) {
-    const plainText = editor.value.state.doc.textBetween(0, editor.value.state.doc.content.size, '\n')
-    if (!plainText || plainText.trim() === '') {
-      el.text = '双击编辑'
-      el.richText = '<p>双击编辑</p>'
-    } else {
-      el.text = plainText
-      el.richText = editor.value.getHTML()
-    }
-  }
-  record()
-  saveText()
-}
-
-const cancel = () => {
-  cancelEditing()
-}
-
-window.addEventListener('keydown', (e) => {
-  if (!editingId.value) return
-  if (e.key === 'Escape') cancel()
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault()
-    finish()
-  }
-})
-
-onBeforeUnmount(() => {
-  if (editor.value) editor.value.destroy()
 })
 </script>
 
 <style scoped>
-.text-editor-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  padding: 0;
-  margin: 0;
-}
-.tiptap-wrapper {
-  width: 100%;
-  height: 100%;
-}
+.text-editor-overlay { background: transparent; }
 :deep(.ProseMirror) {
-  width: 100%;
-  min-height: 100%;
   outline: none !important;
-  border: none !important;
-  padding: 0;
-  margin: 0;
-  background: transparent;
-  color: inherit;
-  font-size: inherit;
-  font-family: inherit;
-  font-weight: inherit;
-  line-height: 1.4;
-  caret-color: #000000;
-  box-sizing: border-box;
-  white-space: pre-wrap;
   word-break: break-word;
+  white-space: pre-wrap;
+  line-height: 1.4 !important;
+  color: inherit; /* 允许继承容器颜色 */
 }
-:deep(.ProseMirror p) {
-  margin: 0;
-}
-:deep(.ProseMirror:focus) {
-  background: rgba(24, 144, 255, 0.08);
-  border-radius: 4px;
-}
+:deep(.ProseMirror p) { margin: 0 !important; }
+
+/* 🌟 样式强制叠加补丁 🌟 */
+:deep(.ProseMirror strong) { font-weight: bold !important; display: inline; }
+:deep(.ProseMirror em) { font-style: italic !important; display: inline; }
+:deep(.ProseMirror u) { text-decoration: underline !important; display: inline; }
+:deep(.ProseMirror s) { text-decoration: line-through !important; display: inline; }
 </style>

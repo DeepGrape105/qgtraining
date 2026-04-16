@@ -182,173 +182,114 @@ export default class Renderer {
   }
 
   static drawText(ctx, el) {
-    const { editingId } = useText()
-    const text = String(el.text || '')
+  const { editingId } = useText();
+  const text = String(el.text || '');
+  const padding = el.padding || 8;
+  const boxWidth = el.width || 200;
+  const maxWidth = boxWidth - padding * 2;
+  const fontSize = el.fontSize || 20;
+  const fontWeight = el.fontWeight || 'normal';
+  const fontFamily = el.fontFamily || 'Arial';
+  const lineHeight = fontSize * 1.4;
 
-    if (text.trim() === '' && editingId.value !== el.id) {
-      el.height = 0
-      return
+  // --- 第一步：计算高度 (无论是否在编辑，都要计算最新高度) ---
+  ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+  const displayText = (editingId.value === el.id && text === '') ? ' ' : text;
+  
+  const chars = displayText.split('');
+  let linesCount = 0;
+  let currentLineWidth = 0;
+  let testLine = '';
+
+  // 简单的换行算法计算总行数
+  const tempLines = [];
+  let tempLine = '';
+  for (let char of chars) {
+    if (char === '\n') {
+      tempLines.push(tempLine);
+      tempLine = '';
+      continue;
     }
-
-    const fontSize = el.fontSize || 20
-    const fontWeight = el.fontWeight || 'normal'
-    const fontFamily = el.fontFamily || 'Arial'
-    ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`
-    ctx.textBaseline = 'top'
-
-    const padding = el.padding || 8
-    const boxWidth = el.width || 200
-    const maxWidth = boxWidth - padding * 2
-    const lineHeight = fontSize * 1.4
-
-    const displayText = (editingId.value === el.id && text === '') ? ' ' : text
-
-    const chars = displayText.split('')
-    const lines = []
-    let currentLine = ''
-
-    for (let char of chars) {
-      if (char === '\n') {
-        lines.push(currentLine)
-        currentLine = ''
-        continue
-      }
-      const testLine = currentLine + char
-      const metrics = ctx.measureText(testLine)
-
-      if (metrics.width > maxWidth && currentLine.length > 0) {
-        lines.push(currentLine)
-        currentLine = char
-      } else {
-        currentLine = testLine
-      }
+    const metrics = ctx.measureText(tempLine + char);
+    if (metrics.width > maxWidth && tempLine.length > 0) {
+      tempLines.push(tempLine);
+      tempLine = char;
+    } else {
+      tempLine += char;
     }
-    if (currentLine || text.endsWith('\n')) {
-      lines.push(currentLine)
-    }
-
-    if (lines.length === 0 && editingId.value === el.id) {
-      lines.push(' ')
-    }
-
-    const neededHeight = lines.length * lineHeight + padding * 2
-    const boxHeight = Math.max(neededHeight, fontSize + padding * 2)
-
-    if (el.backgroundColor && el.backgroundColor !== '#00000000') {
-      ctx.fillStyle = el.backgroundColor
-      ctx.fillRect(el.x, el.y, boxWidth, boxHeight)
-    }
-
-    if (el.stroke && el.strokeWidth > 0 && el.stroke !== '#00000000') {
-      const halfStroke = el.strokeWidth / 2
-      ctx.strokeStyle = el.stroke
-      ctx.lineWidth = el.strokeWidth
-      ctx.strokeRect(
-        el.x - halfStroke,
-        el.y - halfStroke,
-        boxWidth + el.strokeWidth,
-        boxHeight + el.strokeWidth
-      )
-    }
-
-    if (editingId.value !== el.id) {
-      const richText = el.richText || displayText
-      const segments = parseRichText(richText, el.fill || '#000000', fontSize, fontWeight, fontFamily)
-
-      if (segments.length === 0) {
-        ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`
-        ctx.fillStyle = el.fill || '#000000'
-        lines.forEach((line, index) => {
-          ctx.fillText(line, el.x + padding, el.y + padding + index * lineHeight)
-        })
-      } else {
-        let currentY = el.y + padding
-        let currentX = el.x + padding
-        let currentLineHeight = lineHeight
-
-        segments.forEach(seg => {
-          if (seg.text === '\n') {
-            currentY += currentLineHeight
-            currentX = el.x + padding
-            currentLineHeight = lineHeight
-            return
-          }
-
-          let fontStyle = ''
-          if (seg.bold) fontStyle += 'bold '
-          if (seg.italic) fontStyle += 'italic '
-          ctx.font = `${fontStyle}${seg.fontSize || fontSize}px ${seg.fontFamily || fontFamily}`
-          ctx.fillStyle = seg.color
-
-          const words = seg.text.split('')
-          let line = ''
-
-          for (let char of words) {
-            const testLine = line + char
-            const metrics = ctx.measureText(testLine)
-
-            if (metrics.width > maxWidth && line.length > 0) {
-              ctx.fillText(line, currentX, currentY)
-
-              if (seg.underline) {
-                const lineWidth = ctx.measureText(line).width
-                ctx.beginPath()
-                ctx.strokeStyle = seg.color
-                ctx.lineWidth = 1
-                ctx.moveTo(currentX, currentY + seg.fontSize * 1.1)
-                ctx.lineTo(currentX + lineWidth, currentY + seg.fontSize * 1.1)
-                ctx.stroke()
-              }
-
-              if (seg.strike) {
-                const lineWidth = ctx.measureText(line).width
-                ctx.beginPath()
-                ctx.strokeStyle = seg.color
-                ctx.lineWidth = 1
-                ctx.moveTo(currentX, currentY + seg.fontSize * 0.6)
-                ctx.lineTo(currentX + lineWidth, currentY + seg.fontSize * 0.6)
-                ctx.stroke()
-              }
-
-              line = char
-              currentY += currentLineHeight
-              currentX = el.x + padding
-              currentLineHeight = lineHeight
-            } else {
-              line = testLine
-            }
-          }
-
-          if (line) {
-            ctx.fillText(line, currentX, currentY)
-
-            if (seg.underline) {
-              const lineWidth = ctx.measureText(line).width
-              ctx.beginPath()
-              ctx.strokeStyle = seg.color
-              ctx.lineWidth = 1
-              ctx.moveTo(currentX, currentY + seg.fontSize * 1.1)
-              ctx.lineTo(currentX + lineWidth, currentY + seg.fontSize * 1.1)
-              ctx.stroke()
-            }
-
-            if (seg.strike) {
-              const lineWidth = ctx.measureText(line).width
-              ctx.beginPath()
-              ctx.strokeStyle = seg.color
-              ctx.lineWidth = 1
-              ctx.moveTo(currentX, currentY + seg.fontSize * 0.6)
-              ctx.lineTo(currentX + lineWidth, currentY + seg.fontSize * 0.6)
-              ctx.stroke()
-            }
-
-            currentX += ctx.measureText(line).width
-          }
-        })
-      }
-    }
-    el.height = boxHeight
   }
+  tempLines.push(tempLine);
+  
+  const neededHeight = tempLines.length * lineHeight + padding * 2;
+  const boxHeight = Math.max(neededHeight, fontSize + padding * 2);
+  
+  // 关键：实时写回 store，确保选中框（SelectionLayer）能拿到最新高度
+  el.height = boxHeight;
+
+  // --- 第二步：绘制背景和边框 ---
+  if (el.backgroundColor && el.backgroundColor !== '#00000000') {
+    ctx.fillStyle = el.backgroundColor;
+    ctx.fillRect(el.x, el.y, boxWidth, boxHeight);
+  }
+
+  // --- 第三步：绘制文本 (如果是编辑态，不画文字，由 HTML Editor 渲染) ---
+  if (editingId.value === el.id) return;
+
+  const richText = el.richText || displayText;
+  const segments = parseRichText(richText, el.fill || '#000000', fontSize, fontWeight, fontFamily);
+
+  let currentY = el.y + padding;
+  let currentX = el.x + padding;
+
+  // 渲染富文本 Segments
+  segments.forEach(seg => {
+    if (seg.text === '\n') {
+      currentY += lineHeight;
+      currentX = el.x + padding;
+      return;
+    }
+
+    let fontStyle = '';
+    if (seg.bold) fontStyle += 'bold ';
+    if (seg.italic) fontStyle += 'italic ';
+    ctx.font = `${fontStyle}${seg.fontSize || fontSize}px ${seg.fontFamily || fontFamily}`;
+    ctx.fillStyle = seg.color;
+    ctx.textBaseline = 'top';
+
+    const chars = seg.text.split('');
+    for (let char of chars) {
+      const charWidth = ctx.measureText(char).width;
+
+      // 🌟 核心修复：在这里判断单个字符是否会超出边界
+      if (currentX + charWidth > el.x + padding + maxWidth) {
+        currentY += lineHeight;
+        currentX = el.x + padding;
+      }
+
+      ctx.fillText(char, currentX, currentY);
+
+      // 绘制装饰线
+      if (seg.underline) {
+        this.drawLine(ctx, currentX, currentY + (seg.fontSize || fontSize), charWidth, seg.color);
+      }
+      if (seg.strike) {
+        this.drawLine(ctx, currentX, currentY + (seg.fontSize || fontSize) * 0.6, charWidth, seg.color);
+      }
+
+      currentX += charWidth;
+    }
+  });
+}
+
+// 辅助方法：绘制线条（下划线/删除线）
+static drawLine(ctx, x, y, width, color) {
+  ctx.beginPath();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1;
+  ctx.moveTo(x, y);
+  ctx.lineTo(x + width, y);
+  ctx.stroke();
+}
 
   static drawImageElement(ctx, el) {
     if (!el.url) return
@@ -425,11 +366,9 @@ function parseRichText(html, defaultColor, defaultSize, defaultWeight, defaultFa
         })
         currentText = ''
       }
-
       const end = content.indexOf('>', i)
       const tag = content.substring(i + 1, end)
       i = end
-
       if (tag.startsWith('/')) {
         tagStack.pop()
       } else {
@@ -439,7 +378,6 @@ function parseRichText(html, defaultColor, defaultSize, defaultWeight, defaultFa
       currentText += content[i]
     }
   }
-
   if (currentText) {
     segments.push({
       text: currentText,
@@ -452,7 +390,6 @@ function parseRichText(html, defaultColor, defaultSize, defaultWeight, defaultFa
       fontFamily: defaultFamily
     })
   }
-
   return segments
 }
 
