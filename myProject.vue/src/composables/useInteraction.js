@@ -300,6 +300,7 @@ export function useInteraction() {
   }
 
   const handleMouseMove = (e, canvasEl) => {
+    if (!canvasEl) return 
     const screenPos = getScreenCoords(e, canvasEl)
     const { scale, offsetX, offsetY } = getViewport()
 

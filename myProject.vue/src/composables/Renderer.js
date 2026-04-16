@@ -182,104 +182,197 @@ export default class Renderer {
   }
 
   static drawText(ctx, el) {
-  const { editingId } = useText();
-  const text = String(el.text || '');
-  const padding = el.padding || 8;
-  const boxWidth = el.width || 200;
-  const maxWidth = boxWidth - padding * 2;
-  const fontSize = el.fontSize || 20;
-  const fontWeight = el.fontWeight || 'normal';
-  const fontFamily = el.fontFamily || 'Arial';
-  const lineHeight = fontSize * 1.4;
+    const { editingId } = useText();
+    const text = String(el.text || '');
+    const padding = el.padding || 8;
+    const boxWidth = el.width || 200;
+    const maxWidth = boxWidth - padding * 2;
+    const fontSize = el.fontSize || 20;
+    const fontWeight = el.fontWeight || 'normal';
+    const fontFamily = el.fontFamily || 'Arial';
+    const lineHeight = fontSize * 1.4;
 
-  // --- 第一步：计算高度 (无论是否在编辑，都要计算最新高度) ---
-  ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
-  const displayText = (editingId.value === el.id && text === '') ? ' ' : text;
-  
-  const chars = displayText.split('');
-  let linesCount = 0;
-  let currentLineWidth = 0;
-  let testLine = '';
+    // --- 第一步：计算高度 ---
+    ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+    const displayText = (editingId.value === el.id && text === '') ? ' ' : text;
 
-  // 简单的换行算法计算总行数
-  const tempLines = [];
-  let tempLine = '';
-  for (let char of chars) {
-    if (char === '\n') {
-      tempLines.push(tempLine);
-      tempLine = '';
-      continue;
-    }
-    const metrics = ctx.measureText(tempLine + char);
-    if (metrics.width > maxWidth && tempLine.length > 0) {
-      tempLines.push(tempLine);
-      tempLine = char;
-    } else {
-      tempLine += char;
-    }
-  }
-  tempLines.push(tempLine);
-  
-  const neededHeight = tempLines.length * lineHeight + padding * 2;
-  const boxHeight = Math.max(neededHeight, fontSize + padding * 2);
-  
-  // 关键：实时写回 store，确保选中框（SelectionLayer）能拿到最新高度
-  el.height = boxHeight;
-
-  // --- 第二步：绘制背景和边框 ---
-  if (el.backgroundColor && el.backgroundColor !== '#00000000') {
-    ctx.fillStyle = el.backgroundColor;
-    ctx.fillRect(el.x, el.y, boxWidth, boxHeight);
-  }
-
-  // --- 第三步：绘制文本 (如果是编辑态，不画文字，由 HTML Editor 渲染) ---
-  if (editingId.value === el.id) return;
-
-  const richText = el.richText || displayText;
-  const segments = parseRichText(richText, el.fill || '#000000', fontSize, fontWeight, fontFamily);
-
-  let currentY = el.y + padding;
-  let currentX = el.x + padding;
-
-  // 渲染富文本 Segments
-  segments.forEach(seg => {
-    if (seg.text === '\n') {
-      currentY += lineHeight;
-      currentX = el.x + padding;
-      return;
-    }
-
-    let fontStyle = '';
-    if (seg.bold) fontStyle += 'bold ';
-    if (seg.italic) fontStyle += 'italic ';
-    ctx.font = `${fontStyle}${seg.fontSize || fontSize}px ${seg.fontFamily || fontFamily}`;
-    ctx.fillStyle = seg.color;
-    ctx.textBaseline = 'top';
-
-    const chars = seg.text.split('');
+    const chars = displayText.split('');
+    const tempLines = [];
+    let tempLine = '';
     for (let char of chars) {
-      const charWidth = ctx.measureText(char).width;
+      if (char === '\n') {
+        tempLines.push(tempLine);
+        tempLine = '';
+        continue;
+      }
+      const metrics = ctx.measureText(tempLine + char);
+      if (metrics.width > maxWidth && tempLine.length > 0) {
+        tempLines.push(tempLine);
+        tempLine = char;
+      } else {
+        tempLine += char;
+      }
+    }
+    tempLines.push(tempLine);
 
-      // 🌟 核心修复：在这里判断单个字符是否会超出边界
-      if (currentX + charWidth > el.x + padding + maxWidth) {
+    const neededHeight = tempLines.length * lineHeight + padding * 2;
+    const boxHeight = Math.max(neededHeight, fontSize + padding * 2);
+    el.height = boxHeight;
+
+    // --- 第二步：计算实际需要的宽度（根据富文本）---
+    const richText = el.richText || displayText;
+    const segments = parseRichText(richText, el.fill || '#000000', fontSize, fontWeight, fontFamily);
+
+    let maxLineWidth = 0;
+    segments.forEach(seg => {
+      if (seg.text === '\n') return;
+
+      let fontStyle = '';
+      if (seg.bold) fontStyle += 'bold ';
+      if (seg.italic) fontStyle += 'italic ';
+      ctx.font = `${fontStyle}${seg.fontSize || fontSize}px ${seg.fontFamily || fontFamily}`;
+
+      const isChinese = /[\u4e00-\u9fa5]/.test(seg.text);
+      let line = '';
+
+      if (isChinese) {
+        // 中文：逐字符
+        const chars = seg.text.split('');
+        for (let char of chars) {
+          const testLine = line + char;
+          const metrics = ctx.measureText(testLine);
+          if (metrics.width > maxWidth && line.length > 0) {
+            maxLineWidth = Math.max(maxLineWidth, ctx.measureText(line).width);
+            line = char;
+          } else {
+            line = testLine;
+          }
+        }
+      } else {
+        // 英文：按单词
+        const words = seg.text.split(' ');
+        for (let word of words) {
+          const testLine = line + (line ? ' ' : '') + word;
+          const metrics = ctx.measureText(testLine);
+          if (metrics.width > maxWidth && line.length > 0) {
+            maxLineWidth = Math.max(maxLineWidth, ctx.measureText(line).width);
+            line = word;
+          } else {
+            line = line ? line + ' ' + word : word;
+          }
+        }
+      }
+      if (line) {
+        maxLineWidth = Math.max(maxLineWidth, ctx.measureText(line).width);
+      }
+    });
+
+    const actualWidth = Math.max(boxWidth, maxLineWidth + padding * 2);
+
+    // --- 第三步：绘制背景和边框（使用动态宽度）---
+    if (el.backgroundColor && el.backgroundColor !== '#00000000') {
+      ctx.fillStyle = el.backgroundColor;
+      ctx.fillRect(el.x, el.y, actualWidth, boxHeight);
+    }
+
+    if (el.stroke && el.strokeWidth > 0 && el.stroke !== '#00000000') {
+      const halfStroke = el.strokeWidth / 2;
+      ctx.strokeStyle = el.stroke;
+      ctx.lineWidth = el.strokeWidth;
+      ctx.strokeRect(
+        el.x - halfStroke,
+        el.y - halfStroke,
+        actualWidth + el.strokeWidth,
+        boxHeight + el.strokeWidth
+      );
+    }
+
+    // --- 第四步：绘制文本（编辑中不画）---
+    if (editingId.value === el.id) return;
+
+    let currentY = el.y + padding;
+    let currentX = el.x + padding;
+
+    segments.forEach(seg => {
+      if (seg.text === '\n') {
         currentY += lineHeight;
         currentX = el.x + padding;
+        return;
       }
 
-      ctx.fillText(char, currentX, currentY);
+      let fontStyle = '';
+      if (seg.bold) fontStyle += 'bold ';
+      if (seg.italic) fontStyle += 'italic ';
+      ctx.font = `${fontStyle}${seg.fontSize || fontSize}px ${seg.fontFamily || fontFamily}`;
+      ctx.fillStyle = seg.color;
+      ctx.textBaseline = 'top';
 
-      // 绘制装饰线
-      if (seg.underline) {
-        this.drawLine(ctx, currentX, currentY + (seg.fontSize || fontSize), charWidth, seg.color);
-      }
-      if (seg.strike) {
-        this.drawLine(ctx, currentX, currentY + (seg.fontSize || fontSize) * 0.6, charWidth, seg.color);
-      }
+      const isChinese = /[\u4e00-\u9fa5]/.test(seg.text);
 
-      currentX += charWidth;
-    }
-  });
-}
+      if (isChinese) {
+        // 中文：逐字符绘制
+        const chars = seg.text.split('');
+        for (let char of chars) {
+          const charWidth = ctx.measureText(char).width;
+
+          if (currentX + charWidth > el.x + padding + maxWidth) {
+            currentY += lineHeight;
+            currentX = el.x + padding;
+          }
+
+          if (seg.backgroundColor && seg.backgroundColor !== '#00000000') {
+            ctx.fillStyle = seg.backgroundColor;
+            ctx.fillRect(currentX, currentY, charWidth, fontSize);
+          }
+
+          ctx.fillStyle = seg.color;
+          ctx.fillText(char, currentX, currentY);
+
+          if (seg.underline) {
+            this.drawLine(ctx, currentX, currentY + fontSize, charWidth, seg.color);
+          }
+          if (seg.strike) {
+            this.drawLine(ctx, currentX, currentY + fontSize * 0.6, charWidth, seg.color);
+          }
+
+          currentX += charWidth;
+        }
+      } else {
+        // 英文：按单词绘制
+        const words = seg.text.split(' ');
+        for (let i = 0; i < words.length; i++) {
+          const word = words[i];
+          const wordWidth = ctx.measureText(word).width;
+          const spaceWidth = i < words.length - 1 ? ctx.measureText(' ').width : 0;
+
+          if (currentX + wordWidth > el.x + padding + maxWidth) {
+            currentY += lineHeight;
+            currentX = el.x + padding;
+          }
+
+          if (seg.backgroundColor && seg.backgroundColor !== '#00000000') {
+            ctx.fillStyle = seg.backgroundColor;
+            ctx.fillRect(currentX, currentY, wordWidth, fontSize);
+          }
+
+          ctx.fillStyle = seg.color;
+          ctx.fillText(word, currentX, currentY);
+
+          if (seg.underline) {
+            this.drawLine(ctx, currentX, currentY + fontSize, wordWidth, seg.color);
+          }
+          if (seg.strike) {
+            this.drawLine(ctx, currentX, currentY + fontSize * 0.6, wordWidth, seg.color);
+          }
+
+          currentX += wordWidth;
+          if (i < words.length - 1) {
+            currentX += spaceWidth;
+          }
+        }
+      }
+    });
+  }
 
 // 辅助方法：绘制线条（下划线/删除线）
 static drawLine(ctx, x, y, width, color) {
@@ -346,59 +439,82 @@ static drawLine(ctx, x, y, width, color) {
 }
 
 function parseRichText(html, defaultColor, defaultSize, defaultWeight, defaultFamily) {
-  const segments = []
-  let content = html.replace(/<\/?p>/g, '')
-  const tagStack = []
-  let currentText = ''
+  const segments = [];
+  let content = html.replace(/<\/?p>/g, '');
+  const tagStack = [];
+  let currentText = '';
 
   for (let i = 0; i < content.length; i++) {
     if (content[i] === '<') {
       if (currentText) {
         segments.push({
           text: currentText,
-          bold: tagStack.includes('strong') || tagStack.includes('b'),
-          italic: tagStack.includes('em') || tagStack.includes('i'),
-          underline: tagStack.includes('u'),
-          strike: tagStack.includes('del') || tagStack.includes('s'),
+          bold: tagStack.some(t => t.includes('strong') || t.includes('<b>') || t === 'b'),
+          italic: tagStack.some(t => t.includes('em') || t.includes('<i>') || t === 'i'),
+          underline: tagStack.some(t => t.includes('u') || t === 'u'),
+          strike: tagStack.some(t => t.includes('del') || t.includes('s') || t === 's'),
           color: getColorFromStack(tagStack) || defaultColor,
+          backgroundColor: getBackgroundColorFromStack(tagStack) || '#00000000',
           fontSize: defaultSize,
           fontFamily: defaultFamily
-        })
-        currentText = ''
+        });
+        currentText = '';
       }
-      const end = content.indexOf('>', i)
-      const tag = content.substring(i + 1, end)
-      i = end
+
+      const end = content.indexOf('>', i);
+      const tag = content.substring(i + 1, end);
+      i = end;
+
       if (tag.startsWith('/')) {
-        tagStack.pop()
+        tagStack.pop();
       } else {
-        tagStack.push(tag.split(' ')[0])
+        tagStack.push(tag);
       }
     } else {
-      currentText += content[i]
+      currentText += content[i];
     }
   }
+
   if (currentText) {
     segments.push({
       text: currentText,
-      bold: tagStack.includes('strong') || tagStack.includes('b'),
-      italic: tagStack.includes('em') || tagStack.includes('i'),
-      underline: tagStack.includes('u'),
-      strike: tagStack.includes('del') || tagStack.includes('s'),
+      bold: tagStack.some(t => t.includes('strong') || t.includes('<b>') || t === 'b'),
+      italic: tagStack.some(t => t.includes('em') || t.includes('<i>') || t === 'i'),
+      underline: tagStack.some(t => t.includes('u') || t === 'u'),
+      strike: tagStack.some(t => t.includes('del') || t.includes('s') || t === 's'),
       color: getColorFromStack(tagStack) || defaultColor,
+      backgroundColor: getBackgroundColorFromStack(tagStack) || '#00000000',
       fontSize: defaultSize,
       fontFamily: defaultFamily
-    })
+    });
   }
-  return segments
+
+  return segments;
 }
 
 function getColorFromStack(stack) {
-  for (let tag of stack) {
-    if (tag.startsWith('span') && tag.includes('color')) {
-      const match = tag.match(/color:\s*([^;"]+)/)
-      if (match) return match[1]
+  for (let i = stack.length - 1; i >= 0; i--) {
+    const tag = stack[i];
+    if (tag.includes('style=')) {
+      const match = tag.match(/color:\s*([^;"]+)/);
+      if (match) return match[1];
     }
   }
-  return null
+  return null;
+}
+
+function getBackgroundColorFromStack(stack) {
+  for (let i = stack.length - 1; i >= 0; i--) {
+    const tag = stack[i];
+    // 检查 style 里的 background-color
+    if (tag.includes('style=')) {
+      const match = tag.match(/background-color:\s*([^;"]+)/);
+      if (match) return match[1];
+    }
+    // 检查 <mark> 标签（TipTap 高亮默认用 mark）
+    if (tag.includes('mark') || tag === 'mark') {
+      return '#ffff00'; // 默认黄色高亮
+    }
+  }
+  return null;
 }

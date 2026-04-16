@@ -99,17 +99,18 @@
         <div class="prop-row">
           <div class="input-item">
             <label>文字颜色</label>
-            <input type="color" v-model="selectedEl.fill" @input="onValueChange" />
+            <input type="color" :value="editor?.getAttributes('textStyle').color || '#000000'" @input="e => setTextColor(e.target.value)" />
           </div>
         </div>
-        
+
         <!-- 背景色 -->
         <div class="prop-row">
           <div class="input-item">
             <label>背景色</label>
-            <input type="color" v-model="selectedEl.backgroundColor" @input="onValueChange" />
+            <input type="color" :value="editor?.getAttributes('highlight').color || '#00000000'" @input="e => setTextBackground(e.target.value)" />
           </div>
         </div>
+
       </div>
 
       <!-- 图片滤镜 -->
@@ -136,14 +137,14 @@
       <div class="prop-group">
         <div class="group-title">外观样式</div> 
 
-         <div class="prop-row">
+         <div class="prop-row" v-if="selectedEl.type !== 'text'">
           <div class="input-item">
             <label>填充颜色</label>
             <input type="color" v-model="selectedEl.fill" @input="onValueChange" />
           </div>
         </div>
 
-         <div class="prop-row">
+         <div class="prop-row" v-if="selectedEl.type !== 'text'">
           <div class="input-item">
             <label>背景颜色</label>
             <input type="color" v-model="selectedEl.backgroundColor" @input="onValueChange" />
@@ -268,6 +269,18 @@ const applyTextStyle = (type) => {
     
     onValueChange() 
   }
+}
+
+// 设置选中文字颜色
+const setTextColor = (color) => {
+  if (!editor.value || !editingId.value) return
+  editor.value.chain().focus().setColor(color).run()
+}
+
+// 设置选中文字背景色
+const setTextBackground = (color) => {
+  if (!editor.value || !editingId.value) return
+  editor.value.chain().focus().setHighlight({ color }).run()
 }
 
 const isStyleActive = (type) => {

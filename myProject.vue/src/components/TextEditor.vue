@@ -14,9 +14,11 @@ import { useEditor, EditorContent } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
 import { TextStyle } from '@tiptap/extension-text-style'
-import Color from '@tiptap/extension-color'
 import Bold from '@tiptap/extension-bold'
 import Italic from '@tiptap/extension-italic'
+import { Color } from '@tiptap/extension-color'
+import { Highlight } from '@tiptap/extension-highlight'
+
 
 const store = useCanvasStore()
 const { setEditor, updateActiveStyles, editingId, saveText } = useText()
@@ -40,7 +42,7 @@ onBeforeUnmount(() => {
 })
 
 const editor = useEditor({
-  extensions: [StarterKit, Underline, TextStyle, Color, Bold, Italic],
+  extensions: [StarterKit, Underline, TextStyle, Color, Bold, Italic, Highlight],
   onUpdate: ({ editor }) => {
   if (isUpdatingFromStore.value || !isReady.value) return
   const el = store.elements.find(e => e.id === editingId.value)
@@ -137,4 +139,61 @@ const editorStyle = computed(() => {
 :deep(.ProseMirror em) { font-style: italic !important; display: inline; }
 :deep(.ProseMirror u) { text-decoration: underline !important; display: inline; }
 :deep(.ProseMirror s) { text-decoration: line-through !important; display: inline; }
+
+/* 🌟 补全所有嵌套组合，解决下划线、删除线与 B/I 共存问题 */
+:deep(.ProseMirror strong u),
+:deep(.ProseMirror u strong) {
+  font-weight: bold !important;
+  text-decoration: underline !important;
+  display: inline;
+}
+
+:deep(.ProseMirror strong s),
+:deep(.ProseMirror s strong) {
+  font-weight: bold !important;
+  text-decoration: line-through !important;
+  display: inline;
+}
+
+:deep(.ProseMirror em u),
+:deep(.ProseMirror u em) {
+  font-style: italic !important;
+  text-decoration: underline !important;
+  display: inline;
+}
+
+:deep(.ProseMirror em s),
+:deep(.ProseMirror s em) {
+  font-style: italic !important;
+  text-decoration: line-through !important;
+  display: inline;
+}
+
+:deep(.ProseMirror strong em u),
+:deep(.ProseMirror strong u em),
+:deep(.ProseMirror em strong u),
+:deep(.ProseMirror em u strong),
+:deep(.ProseMirror u strong em),
+:deep(.ProseMirror u em strong) {
+  font-weight: bold !important;
+  font-style: italic !important;
+  text-decoration: underline !important;
+  display: inline;
+}
+
+:deep(.ProseMirror strong em s),
+:deep(.ProseMirror strong s em),
+:deep(.ProseMirror em strong s),
+:deep(.ProseMirror em s strong),
+:deep(.ProseMirror s strong em),
+:deep(.ProseMirror s em strong) {
+  font-weight: bold !important;
+  font-style: italic !important;
+  text-decoration: line-through !important;
+  display: inline;
+}
+:deep(.ProseMirror mark) {
+  background-color: #ffff00;
+  padding: 0;
+}
 </style>
