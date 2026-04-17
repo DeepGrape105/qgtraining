@@ -656,8 +656,9 @@ export function useInteraction() {
         }
       })
     } else if (isPanning) {
-      panViewport(dx, dy)
+      panViewport(dx, dy) 
     }
+    
 
     lastMousePos = { x: screenPos.x, y: screenPos.y }
   }
@@ -843,6 +844,7 @@ export function useInteraction() {
     })
   }
 
+  // 滚轮
   const handleWheel = (e, canvasEl) => {
     e.preventDefault()
     if (e.ctrlKey || e.metaKey) {
@@ -852,7 +854,6 @@ export function useInteraction() {
       panViewport(-e.deltaX, -e.deltaY)
     }
   }
-
   onMounted(() => {
     window.addEventListener('keydown', handleKeyDown)
     window.addEventListener('keyup', handleKeyUp)

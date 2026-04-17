@@ -14,10 +14,8 @@
           @wheel="onWheel"
         ></canvas>
         <TextEditor />
-      </div>
-
-      <RightSidebar />
-    </div>
+      </div><RightSidebar /></div>
+    <Minimap />
   </div>
 </template>
 
@@ -27,6 +25,7 @@ import Toolbar from './Toolbar.vue'
 import LayerPanel from './LayerPanel.vue'
 import RightSidebar from './RightSidebar.vue'
 import TextEditor from './TextEditor.vue'
+import Minimap from './Minimap.vue'
 import { useCanvas } from '../composables/useCanvas'
 import { useInteraction } from '../composables/useInteraction'
 import { usePersistence } from '../hooks/usePersistence'

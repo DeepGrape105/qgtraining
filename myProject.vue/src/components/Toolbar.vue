@@ -92,7 +92,6 @@
       <button class="tool-btn" @click="handleZoomIn">➕</button>
       <span class="zoom-indicator">{{ Math.round(viewport.scale * 100) }}%</span>
       <button class="tool-btn" @click="handleZoomOut">➖</button>
-      <button class="tool-btn" @click="handleResetView">🔄</button>
     </div>
 
     <div class="divider"></div>
