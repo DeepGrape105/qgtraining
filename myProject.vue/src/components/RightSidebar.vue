@@ -18,6 +18,19 @@
               <input type="number" :value="triangleCenter.y" @input="e => updateTrianglePosition('y', e.target.value)" />
             </div>
           </div>
+          <div class="prop-row">
+        <div class="input-item">
+          <label>旋转</label>
+          <input 
+            type="number" 
+            v-model.number="selectedEl.rotation" 
+            @input="onValueChange"
+            min="-360"
+            max="360"
+            step="1"
+          />
+        </div>
+      </div>
         </div>
       </template>
 
@@ -44,6 +57,19 @@
             <input type="number" v-model.number="selectedEl.height" @change="onValueChange" />
           </div>
         </div>
+        <div class="prop-row">
+        <div class="input-item">
+          <label>旋转</label>
+          <input 
+            type="number" 
+            v-model.number="selectedEl.rotation" 
+            @input="onValueChange"
+            min="-360"
+            max="360"
+            step="1"
+          />
+        </div>
+      </div>
         <div class="prop-row" v-if="selectedEl.type === 'image'">
           <div class="input-item">
             <label>宽</label>

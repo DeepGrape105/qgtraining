@@ -337,7 +337,7 @@ export function useElements() {
     toggleLock,
     toggleVisible,
     //选中操作
-    toggleSelection
+    toggleSelection,
     //旋转
     rotateElement,
     rotateSelected

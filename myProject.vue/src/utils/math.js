@@ -170,3 +170,34 @@ export function getDistance(p1, p2) {
 export function getScaleFactor(startDist, currentDist, min = 0.3, max = 3) {
   return Math.max(min, Math.min(max, currentDist / startDist))
 }
+
+// 计算点绕中心旋转后的坐标
+export function rotatePoint(point, center, angle) {
+  const rad = (angle * Math.PI) / 180
+  const cos = Math.cos(rad)
+  const sin = Math.sin(rad)
+  const dx = point.x - center.x
+  const dy = point.y - center.y
+  return {
+    x: center.x + dx * cos - dy * sin,
+    y: center.y + dx * sin + dy * cos
+  }
+}
+
+// 获取元素中心点
+export function getElementCenter(el) {
+  if (el.type === 'circle') {
+    return { x: el.x, y: el.y }
+  } else if (el.type === 'triangle') {
+    const points = el.points
+    return {
+      x: (points[0].x + points[1].x + points[2].x) / 3,
+      y: (points[0].y + points[1].y + points[2].y) / 3
+    }
+  } else {
+    return {
+      x: el.x + (el.width || 0) / 2,
+      y: el.y + (el.height || 0) / 2
+    }
+  }
+}

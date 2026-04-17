@@ -1,6 +1,7 @@
 // src/composables/Renderer.js
 import { useCanvasStore } from '../store/canvasStore';
 import { useText } from './useText'
+import { getElementCenter } from '../utils/math'
 
 export default class Renderer {
   static imageCache = new Map();
@@ -54,25 +55,92 @@ export default class Renderer {
       h = el.height
     }
 
-    const padding = 8 / scale
+    const center = {
+      x: minX + w / 2,
+      y: minY + h / 2
+    }
 
+    const padding = 8 / scale
+    const handleSize = 10 / scale
+
+    // 四角手柄
+    const cornerOffsets = [
+      { x: -w / 2 - padding, y: -h / 2 - padding },
+      { x: w / 2 + padding, y: -h / 2 - padding },
+      { x: -w / 2 - padding, y: h / 2 + padding },
+      { x: w / 2 + padding, y: h / 2 + padding }
+    ]
+
+    const corners = cornerOffsets.map(offset => {
+      let x = offset.x
+      let y = offset.y
+      if (el.rotation) {
+        const rad = (el.rotation * Math.PI) / 180
+        const cos = Math.cos(rad)
+        const sin = Math.sin(rad)
+        x = offset.x * cos - offset.y * sin
+        y = offset.x * sin + offset.y * cos
+      }
+      return { x: center.x + x, y: center.y + y }
+    })
+
+    // 🌟 顶部边中点（连接线起点）
+    const topMidOffset = { x: 0, y: -h / 2 - padding }
+    let topMidX = topMidOffset.x
+    let topMidY = topMidOffset.y
+    if (el.rotation) {
+      const rad = (el.rotation * Math.PI) / 180
+      const cos = Math.cos(rad)
+      const sin = Math.sin(rad)
+      topMidX = topMidOffset.x * cos - topMidOffset.y * sin
+      topMidY = topMidOffset.x * sin + topMidOffset.y * cos
+    }
+    const topMid = {
+      x: center.x + topMidX,
+      y: center.y + topMidY
+    }
+
+    // 🌟 旋转手柄：从顶部中点向外延伸 28px
+    const rotateOffset = { x: 0, y: -h / 2 - padding - 28 / scale }
+    let rotateX = rotateOffset.x
+    let rotateY = rotateOffset.y
+    if (el.rotation) {
+      const rad = (el.rotation * Math.PI) / 180
+      const cos = Math.cos(rad)
+      const sin = Math.sin(rad)
+      rotateX = rotateOffset.x * cos - rotateOffset.y * sin
+      rotateY = rotateOffset.x * sin + rotateOffset.y * cos
+    }
+    const rotateHandle = {
+      x: center.x + rotateX,
+      y: center.y + rotateY
+    }
+
+    // 画选中框
     ctx.save()
+    if (el.rotation) {
+      ctx.translate(center.x, center.y)
+      ctx.rotate((el.rotation * Math.PI) / 180)
+      ctx.translate(-center.x, -center.y)
+    }
     ctx.strokeStyle = '#1890ff'
     ctx.lineWidth = 2 / scale
     ctx.setLineDash([])
     ctx.strokeRect(minX - padding, minY - padding, w + padding * 2, h + padding * 2)
+    ctx.restore()
 
+    // 画连接线（从顶部中点到旋转手柄）
+    ctx.beginPath()
+    ctx.strokeStyle = '#1890ff'
+    ctx.lineWidth = 1.5 / scale
+    ctx.setLineDash([])  // 实线
+    ctx.moveTo(topMid.x, topMid.y)
+    ctx.lineTo(rotateHandle.x, rotateHandle.y)
+    ctx.stroke()
+
+    // 画四角手柄（白色填充，蓝色边框）
     ctx.fillStyle = '#ffffff'
     ctx.strokeStyle = '#1890ff'
-    const handleSize = 10 / scale
-
-    const corners = [
-      { x: minX - padding, y: minY - padding },
-      { x: minX + w + padding, y: minY - padding },
-      { x: minX - padding, y: minY + h + padding },
-      { x: minX + w + padding, y: minY + h + padding }
-    ]
-
     corners.forEach(corner => {
       ctx.beginPath()
       ctx.arc(corner.x, corner.y, handleSize / 2, 0, Math.PI * 2)
@@ -80,10 +148,58 @@ export default class Renderer {
       ctx.stroke()
     })
 
-    ctx.restore()
+    // 🌟 画旋转手柄（Word 风格：绿色实心圆点）
+    ctx.beginPath()
+    ctx.fillStyle = '#4CAF50'  // 绿色
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.2)'
+    ctx.shadowBlur = 4 / scale
+    ctx.arc(rotateHandle.x, rotateHandle.y, handleSize / 1.5, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.shadowColor = 'transparent'  // 取消阴影
+
+    // 加一个小白点增加立体感
+    ctx.beginPath()
+    ctx.fillStyle = '#ffffff'
+    ctx.arc(rotateHandle.x - 2 / scale, rotateHandle.y - 2 / scale, handleSize / 6, 0, Math.PI * 2)
+    ctx.fill()
   }
 
   static drawRect(ctx, el) {
+    if (!el.rotation) {
+      // 无旋转：直接画
+      if (el.backgroundColor) {
+        ctx.fillStyle = el.backgroundColor
+        ctx.fillRect(el.x, el.y, el.width, el.height)
+      }
+      if (el.fill) {
+        ctx.fillStyle = el.fill
+        ctx.fillRect(el.x, el.y, el.width, el.height)
+      }
+      if (el.stroke && el.strokeWidth > 0) {
+        const halfStroke = el.strokeWidth / 2
+        ctx.strokeStyle = el.stroke
+        ctx.lineWidth = el.strokeWidth
+        ctx.strokeRect(
+          el.x - halfStroke,
+          el.y - halfStroke,
+          el.width + el.strokeWidth,
+          el.height + el.strokeWidth
+        )
+      }
+      return
+    }
+
+    // 有旋转：用变换绘制
+    const center = {
+      x: el.x + el.width / 2,
+      y: el.y + el.height / 2
+    }
+
+    ctx.save()
+    ctx.translate(center.x, center.y)
+    ctx.rotate((el.rotation * Math.PI) / 180)
+    ctx.translate(-center.x, -center.y)
+
     if (el.backgroundColor) {
       ctx.fillStyle = el.backgroundColor
       ctx.fillRect(el.x, el.y, el.width, el.height)
@@ -103,15 +219,26 @@ export default class Renderer {
         el.height + el.strokeWidth
       )
     }
+
+    ctx.restore()
   }
 
   static drawCircle(ctx, el) {
     const radius = el.strokeWidth > 0 ? el.radius + el.strokeWidth / 2 : el.radius
+    const center = { x: el.x, y: el.y }
+
+    // 应用旋转
+    if (el.rotation) {
+      ctx.save()
+      ctx.translate(center.x, center.y)
+      ctx.rotate((el.rotation * Math.PI) / 180)
+      ctx.translate(-center.x, -center.y)
+    }
 
     ctx.beginPath()
     ctx.arc(el.x, el.y, radius, 0, Math.PI * 2)
 
-    if (el.backgroundColor && el.backgroundColor !== 'transparent') {
+    if (el.backgroundColor && el.backgroundColor !== '#00000000') {
       ctx.fillStyle = el.backgroundColor
       ctx.fill()
     }
@@ -119,56 +246,54 @@ export default class Renderer {
       ctx.fillStyle = el.fill
       ctx.fill()
     }
-    if (el.stroke && el.strokeWidth > 0 && el.stroke !== 'transparent') {
+    if (el.stroke && el.strokeWidth > 0 && el.stroke !== '#00000000') {
       ctx.strokeStyle = el.stroke
       ctx.lineWidth = el.strokeWidth
       ctx.stroke()
+    }
+    if (el.rotation) {
+      ctx.restore()
     }
   }
 
   static drawTriangle(ctx, el) {
     if (!el.points || el.points.length < 3) return
 
-    if (!el.stroke || el.strokeWidth === 0 || el.stroke === 'transparent') {
-      ctx.beginPath()
-      ctx.moveTo(el.points[0].x, el.points[0].y)
-      ctx.lineTo(el.points[1].x, el.points[1].y)
-      ctx.lineTo(el.points[2].x, el.points[2].y)
-      ctx.closePath()
-
-      if (el.backgroundColor && el.backgroundColor !== 'transparent') {
-        ctx.fillStyle = el.backgroundColor
-        ctx.fill()
-      }
-      if (el.fill) {
-        ctx.fillStyle = el.fill
-        ctx.fill()
-      }
-      return
+    const center = {
+      x: (el.points[0].x + el.points[1].x + el.points[2].x) / 3,
+      y: (el.points[0].y + el.points[1].y + el.points[2].y) / 3
     }
 
-    const halfStroke = el.strokeWidth / 2
-    const points = el.points
-    const cx = (points[0].x + points[1].x + points[2].x) / 3
-    const cy = (points[0].y + points[1].y + points[2].y) / 3
+    // 应用旋转
+    if (el.rotation) {
+      ctx.save()
+      ctx.translate(center.x, center.y)
+      ctx.rotate((el.rotation * Math.PI) / 180)
+      ctx.translate(-center.x, -center.y)
+    }
 
-    const expandedPoints = points.map(p => {
-      const dx = p.x - cx
-      const dy = p.y - cy
-      const dist = Math.sqrt(dx * dx + dy * dy)
-      return {
-        x: p.x + (dx / dist) * halfStroke,
-        y: p.y + (dy / dist) * halfStroke
-      }
-    })
+    // 计算扩展后的顶点（考虑边框）
+    let points = el.points
+    if (el.stroke && el.strokeWidth > 0 && el.stroke !== '#00000000') {
+      const halfStroke = el.strokeWidth / 2
+      points = el.points.map(p => {
+        const dx = p.x - center.x
+        const dy = p.y - center.y
+        const dist = Math.sqrt(dx * dx + dy * dy)
+        return {
+          x: p.x + (dx / dist) * halfStroke,
+          y: p.y + (dy / dist) * halfStroke
+        }
+      })
+    }
 
     ctx.beginPath()
-    ctx.moveTo(expandedPoints[0].x, expandedPoints[0].y)
-    ctx.lineTo(expandedPoints[1].x, expandedPoints[1].y)
-    ctx.lineTo(expandedPoints[2].x, expandedPoints[2].y)
+    ctx.moveTo(points[0].x, points[0].y)
+    ctx.lineTo(points[1].x, points[1].y)
+    ctx.lineTo(points[2].x, points[2].y)
     ctx.closePath()
 
-    if (el.backgroundColor && el.backgroundColor !== 'transparent') {
+    if (el.backgroundColor && el.backgroundColor !== '#00000000') {
       ctx.fillStyle = el.backgroundColor
       ctx.fill()
     }
@@ -176,9 +301,15 @@ export default class Renderer {
       ctx.fillStyle = el.fill
       ctx.fill()
     }
-    ctx.strokeStyle = el.stroke
-    ctx.lineWidth = el.strokeWidth
-    ctx.stroke()
+    if (el.stroke && el.strokeWidth > 0 && el.stroke !== '#00000000') {
+      ctx.strokeStyle = el.stroke
+      ctx.lineWidth = el.strokeWidth
+      ctx.stroke()
+    }
+
+    if (el.rotation) {
+      ctx.restore()
+    }
   }
 
   static drawText(ctx, el) {
@@ -269,11 +400,24 @@ export default class Renderer {
 
     const actualWidth = Math.max(boxWidth, maxLineWidth + padding * 2);
 
+    const center = {
+      x: el.x + actualWidth / 2,
+      y: el.y + boxHeight / 2
+    }
+
+    if (el.rotation) {
+      ctx.save()
+      ctx.translate(center.x, center.y)
+      ctx.rotate((el.rotation * Math.PI) / 180)
+      ctx.translate(-center.x, -center.y)
+    }
+
     // --- 第三步：绘制背景和边框（使用动态宽度）---
     if (el.backgroundColor && el.backgroundColor !== '#00000000') {
       ctx.fillStyle = el.backgroundColor;
       ctx.fillRect(el.x, el.y, actualWidth, boxHeight);
     }
+
 
     if (el.stroke && el.strokeWidth > 0 && el.stroke !== '#00000000') {
       const halfStroke = el.strokeWidth / 2;
@@ -373,6 +517,9 @@ export default class Renderer {
         }
       }
     });
+    if (el.rotation) {
+      ctx.restore()
+    }
   }
 
 // 辅助方法：绘制线条（下划线/删除线）
@@ -388,8 +535,20 @@ static drawLine(ctx, x, y, width, color) {
   static drawImageElement(ctx, el) {
     if (!el.url) return
 
-    let img = this.imageCache.get(el.url)
+    const center = {
+      x: el.x + el.width / 2,
+      y: el.y + el.height / 2
+    }
 
+    // 应用旋转
+    if (el.rotation) {
+      ctx.save()
+      ctx.translate(center.x, center.y)
+      ctx.rotate((el.rotation * Math.PI) / 180)
+      ctx.translate(-center.x, -center.y)
+    }
+
+    let img = this.imageCache.get(el.url)
     if (!img) {
       img = new Image()
       img.crossOrigin = 'anonymous'
@@ -397,7 +556,7 @@ static drawLine(ctx, x, y, width, color) {
       this.imageCache.set(el.url, img)
     }
 
-    if (el.backgroundColor && el.backgroundColor !== 'transparent') {
+    if (el.backgroundColor && el.backgroundColor !== '#00000000') {
       ctx.fillStyle = el.backgroundColor
       ctx.fillRect(el.x, el.y, el.width, el.height)
     }
@@ -411,21 +570,15 @@ static drawLine(ctx, x, y, width, color) {
         if (el.filters.contrast) parts.push(`contrast(${100 + el.filters.contrast}%)`)
         if (parts.length > 0) filter = parts.join(' ')
       }
-
       ctx.filter = filter
       ctx.drawImage(img, el.x, el.y, el.width, el.height)
       ctx.filter = 'none'
     } else {
       ctx.fillStyle = '#f0f0f0'
       ctx.fillRect(el.x, el.y, el.width, el.height)
-      ctx.fillStyle = '#999'
-      ctx.font = '12px Arial'
-      ctx.textAlign = 'center'
-      ctx.textBaseline = 'middle'
-      ctx.fillText('...', el.x + el.width / 2, el.y + el.height / 2)
     }
 
-    if (el.stroke && el.strokeWidth > 0 && el.stroke !== 'transparent') {
+    if (el.stroke && el.strokeWidth > 0 && el.stroke !== '#00000000') {
       const halfStroke = el.strokeWidth / 2
       ctx.strokeStyle = el.stroke
       ctx.lineWidth = el.strokeWidth
@@ -435,6 +588,10 @@ static drawLine(ctx, x, y, width, color) {
         el.width + el.strokeWidth,
         el.height + el.strokeWidth
       )
+    }
+
+    if (el.rotation) {
+      ctx.restore()
     }
   }
 }

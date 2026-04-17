@@ -129,7 +129,6 @@ export function useCanvas() {
         Renderer.drawHighlight(ctx, el, scale)
       }
     } else if (store.selectedIds.length > 1) {
-      // 多选：画整体包围盒
       const selectedElements = store.elements.filter(el => store.selectedIds.includes(el.id))
 
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
@@ -157,15 +156,16 @@ export function useCanvas() {
       const padding = 8 / scale
       const w = maxX - minX
       const h = maxY - minY
+      const center = { x: minX + w / 2, y: minY + h / 2 }
 
       // 画虚线包围盒
       ctx.strokeStyle = '#1890ff'
       ctx.lineWidth = 2 / scale
       ctx.setLineDash([5 / scale, 5 / scale])
       ctx.strokeRect(minX - padding, minY - padding, w + padding * 2, h + padding * 2)
+      ctx.setLineDash([])
 
       // 画四角手柄
-      ctx.setLineDash([])
       ctx.fillStyle = '#ffffff'
       ctx.strokeStyle = '#1890ff'
       const handleSize = 10 / scale
@@ -183,6 +183,35 @@ export function useCanvas() {
         ctx.fill()
         ctx.stroke()
       })
+
+      // 🌟 画多选旋转手柄（在整体包围盒顶部中间）
+      const rotateHandleDistance = 28 / scale
+      const rotateHandle = {
+        x: center.x,
+        y: minY - padding - rotateHandleDistance
+      }
+
+      // 画连接线
+      ctx.beginPath()
+      ctx.strokeStyle = '#1890ff'
+      ctx.lineWidth = 1.5 / scale
+      ctx.moveTo(center.x, minY - padding)
+      ctx.lineTo(rotateHandle.x, rotateHandle.y)
+      ctx.stroke()
+
+      // 画旋转手柄（绿色圆点）
+      ctx.beginPath()
+      ctx.fillStyle = '#4CAF50'
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.2)'
+      ctx.shadowBlur = 4 / scale
+      ctx.arc(rotateHandle.x, rotateHandle.y, handleSize / 1.5, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.shadowColor = 'transparent'
+
+      ctx.beginPath()
+      ctx.fillStyle = '#ffffff'
+      ctx.arc(rotateHandle.x - 2 / scale, rotateHandle.y - 2 / scale, handleSize / 6, 0, Math.PI * 2)
+      ctx.fill()
     }
 
     ctx.restore()
