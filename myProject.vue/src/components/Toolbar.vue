@@ -41,8 +41,34 @@
   </template>
   
   <button class="tool-btn delete-btn" @click="removeSelected">删除</button>
-</div>
-<div v-else class="hint">未选中元素</div>
+  </div>
+ <!-- 🌟 中间区域：根据选中数量显示不同内容 -->
+    <div class="tool-group">
+      <!-- 单选：显示颜色选择器和删除 -->
+      <template v-if="selectedCount === 1 && selectedEl">
+        <div class="color-picker-wrapper" v-if="selectedEl.type !== 'image'">
+          <label>填充：</label>
+          <input 
+            type="color" 
+            :value="selectedEl.fill || '#000000'" 
+            @input="e => updateElementFill(e.target.value)" 
+          />
+        </div>
+        <button class="tool-btn delete-btn" @click="removeSelected">删除</button>
+      </template>
+      
+      <!-- 🌟 多选：显示打组和解组 -->
+      <template v-else-if="selectedCount > 1">
+        <button class="tool-btn" @click="group">📁 打组</button>
+        <button class="tool-btn" @click="ungroup">📂 解组</button>
+        <button class="tool-btn delete-btn" @click="removeSelected">删除</button>
+      </template>
+      
+      <!-- 未选中：显示提示 -->
+      <template v-else>
+        <div class="hint">未选中元素</div>
+      </template>
+    </div>
 
     <div class="divider"></div>
 
@@ -107,18 +133,12 @@ const viewport = computed(() => getViewport())
 const { record } = useHistory()
 const {addText} = useText()
 const { 
-  addRect, 
-  addCircle, 
-  addTriangle, 
-  addImage, 
-  removeSelected, 
-  updateSelected,
-  setElements,
-  getSelectedElement ,
-  getElements, 
-  getConfig,
-  clearSelection
+  addRect, addCircle, addTriangle, addImage, 
+  removeSelected, updateSelected,
+  setElements,  getElements, getConfig, clearSelection,
+  group, ungroup 
 } = useElements()
+
 
 // UI 交互状态
 const isSaving = ref(false);
@@ -135,6 +155,8 @@ const selectedEl = computed(() => {
   if (ids.length !== 1) return null  // 多选或没选时返回 null
   return store.elements.find(el => el.id === ids[0])
 })
+
+const selectedCount = computed(() => store.selectedIds.length)
 
 /**
  * 更新选中元素的填充颜色

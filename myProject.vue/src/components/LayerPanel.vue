@@ -1,5 +1,5 @@
 <template>
-  <div class="layer-panel">
+  <!-- <div class="layer-panel">
     <div class="panel-header">图层管理</div>
     <div class="layer-list">
       <div 
@@ -19,7 +19,7 @@
       </div>
       <div v-if="elements.length === 0" class="empty-tip">暂无元素</div>
     </div>
-  </div>
+  </div> -->
 </template>
 
 <script setup>

@@ -6,7 +6,7 @@ import { useText } from './useText'
 
 export function useKeyboard() {
   const store = useCanvasStore()
-  const { copyElement, pasteElement, removeSelected } = useElements()
+  const { copyElement, pasteElement, removeSelected, group, ungroup } = useElements()
   const { undo, redo } = useHistory()
   const { editingId } = useText()
 
@@ -31,12 +31,23 @@ export function useKeyboard() {
       pasteElement()
     }
     if (e.key === 'Delete' || e.key === 'Backspace') {
-      if (editingId.value) return  
+      if (editingId.value) return
       removeSelected()
     }
     if (isCtrl && e.key === 'a') {
       e.preventDefault()
       store.selectedIds = store.elements.map(el => el.id)
+    }
+    // 🌟 Ctrl + G：打组
+    if (isCtrl && e.key === 'g' && !e.shiftKey) {
+      e.preventDefault()
+      group()
+    }
+
+    // 🌟 Ctrl + Shift + G：解组
+    if (isCtrl && e.shiftKey && e.key === 'G') {
+      e.preventDefault()
+      ungroup()
     }
   }
 

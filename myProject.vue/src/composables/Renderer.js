@@ -27,7 +27,7 @@ export default class Renderer {
 
     ctx.restore()
   }
-
+  
   static drawHighlight(ctx, el, scale) {
     let minX, minY, w, h
 

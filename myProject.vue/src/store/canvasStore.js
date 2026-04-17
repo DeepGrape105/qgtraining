@@ -8,6 +8,7 @@ export const useCanvasStore = defineStore('canvas', {
   state: () => ({
     elements: [],//画布里的所有元素
     selectedIds: [],//当前选中的元素
+    groups: {},  // 🌟 { groupId: { name: '组合1', expanded: true } }
     canvasConfig: {
       showGrid: true,        // 是否显示网格
       gridSize: 30,          // 网格大小     

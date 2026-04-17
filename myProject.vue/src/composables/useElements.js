@@ -6,7 +6,7 @@
     * 选中操作（clearSelection, setSelection, getSelectedElement）
     * 持久化恢复（restoreState）
    */
-  
+
 import { useCanvasStore } from '../store/canvasStore'
 import { useHistory } from './useHistory'
 
@@ -28,16 +28,16 @@ export function useElements() {
    * 获取基础元素属性（所有图形共用的）
    */
   const getBaseElement = (type, id) => ({
-  id, type,
-  x: 100, y: 100,
-  fill: '#Fff',           // 文字默认黑色
-  backgroundColor: '#00000000',
-  stroke: '#000000',
-  strokeWidth: 1,
-  opacity: 1,
-  zIndex: store.elements.length + 1,
-  rotation: 0
-})
+    id, type,
+    x: 100, y: 100,
+    fill: '#Fff',           // 文字默认黑色
+    backgroundColor: '#00000000',
+    stroke: '#000000',
+    strokeWidth: 1,
+    opacity: 1,
+    zIndex: store.elements.length + 1,
+    rotation: 0
+  })
 
   /**
    * 添加矩形
@@ -71,19 +71,19 @@ export function useElements() {
   /**
    * 添加三角形
    */
- const addTriangle = () => {
-  record()
-  const id = generateId('triangle')
-  store.elements.push({
-    ...getBaseElement('triangle', id),
-    points: [
-      { x: 150, y: 50 },
-      { x: 100, y: 150 },
-      { x: 200, y: 150 }
-    ]
-  })
-  store.selectedIds = [id]
-}
+  const addTriangle = () => {
+    record()
+    const id = generateId('triangle')
+    store.elements.push({
+      ...getBaseElement('triangle', id),
+      points: [
+        { x: 150, y: 50 },
+        { x: 100, y: 150 },
+        { x: 200, y: 150 }
+      ]
+    })
+    store.selectedIds = [id]
+  }
 
   /**
    * 添加图片
@@ -209,9 +209,9 @@ export function useElements() {
     return id ? store.elements.find(el => el.id === id) : null
   }
 
-    /**
-   * 获取画布配置
-   */
+  /**
+ * 获取画布配置
+ */
   const getConfig = () => {
     return store.canvasConfig
   }
@@ -301,6 +301,42 @@ export function useElements() {
     })
   }
 
+  // 🌟 打组
+  const group = () => {
+    if (store.selectedIds.length < 2) return
+
+    record()
+    const groupId = generateId('group')  // ← 用你现有的 generateId
+
+    // 把所有选中元素的 groupId 设置为新组合
+    store.selectedIds.forEach(id => {
+      const el = store.elements.find(e => e.id === id)
+      if (el) el.groupId = groupId
+    })
+
+    // 保存组合信息
+    store.groups[groupId] = {
+      id: groupId,
+      name: `组合 ${Object.keys(store.groups).length + 1}`,
+      expanded: true
+    }
+  }
+
+  // 🌟 解组
+  const ungroup = () => {
+    const selectedElements = store.elements.filter(e => store.selectedIds.includes(e.id))
+    const groupIds = [...new Set(selectedElements.map(e => e.groupId).filter(Boolean))]
+
+    if (groupIds.length === 0) return
+
+    record()
+    groupIds.forEach(groupId => {
+      store.elements.forEach(el => {
+        if (el.groupId === groupId) el.groupId = null
+      })
+      delete store.groups[groupId]
+    })
+  }
   return {
     // 内部工具函数
     generateId,
@@ -340,6 +376,9 @@ export function useElements() {
     toggleSelection,
     //旋转
     rotateElement,
-    rotateSelected
+    rotateSelected,
+    // 打组
+    group,
+    ungroup
   }
 }

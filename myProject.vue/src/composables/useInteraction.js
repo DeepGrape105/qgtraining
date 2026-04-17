@@ -5,11 +5,30 @@ import { useViewport } from './useViewport'
 import { useHistory } from './useHistory'
 import { useText } from './useText'
 import { onMounted, onUnmounted } from 'vue'
-import { getMultiSelectionCenter, getDistance, getScaleFactor , getElementCenter} from '../utils/math'
+import { getMultiSelectionCenter, getDistance, getScaleFactor, getElementCenter } from '../utils/math'
 
 let globalLastClickTime = 0
 let globalLastSelectedId = null
 
+// 🌟 获取有效选中元素（如果选中了组合内的元素，自动包含同组合的其他元素）
+const getEffectiveSelectedIds = (elements, selectedIds) => {
+  const ids = new Set(selectedIds)
+
+  selectedIds.forEach(id => {
+    const el = elements.find(e => e.id === id)
+    if (el && el.groupId) {
+      // 🌟 有 groupId：把同组合的所有元素都加进来
+      elements.forEach(other => {
+        if (other.groupId === el.groupId) {
+          ids.add(other.id)
+        }
+      })
+    }
+    // 🌟 没有 groupId：什么都不做，只操作它自己
+  })
+
+  return [...ids]
+}
 export function useInteraction() {
   const store = useCanvasStore()
   const { updateElement, setSelection, clearSelection, toggleSelection } = useElements()
@@ -36,7 +55,7 @@ export function useInteraction() {
   let isRotating = false
   let rotateStartAngle = 0
   let rotateStartRotation = 0
-  let rotateStartRotations = [] 
+  let rotateStartRotations = []
 
   const getScreenCoords = (e, canvasEl) => {
     const rect = canvasEl.getBoundingClientRect()
@@ -53,43 +72,69 @@ export function useInteraction() {
   }
 
   const getResizeHandle = (screenPos, el, scale, offsetX, offsetY) => {
-
     const handleSize = 15
     const padding = 10
 
-    let minX, minY, w, h
+    let minX, minY, w, h, centerX, centerY
 
     if (el.type === 'circle') {
-      minX = (el.x - el.radius) * scale + offsetX
-      minY = (el.y - el.radius) * scale + offsetY
-      w = el.radius * 2 * scale
-      h = el.radius * 2 * scale
+      centerX = el.x
+      centerY = el.y
+      minX = el.x - el.radius
+      minY = el.y - el.radius
+      w = el.radius * 2
+      h = el.radius * 2
     } else if (el.type === 'triangle') {
-      const xs = el.points.map(p => p.x * scale + offsetX)
-      const ys = el.points.map(p => p.y * scale + offsetY)
+      const xs = el.points.map(p => p.x)
+      const ys = el.points.map(p => p.y)
       minX = Math.min(...xs)
       minY = Math.min(...ys)
       w = Math.max(...xs) - minX
       h = Math.max(...ys) - minY
+      centerX = minX + w / 2
+      centerY = minY + h / 2
     } else {
-      minX = el.x * scale + offsetX
-      minY = el.y * scale + offsetY
-      w = (el.width || 0) * scale
-      h = (el.height || 0) * scale
+      minX = el.x
+      minY = el.y
+      w = el.width || 0
+      h = el.height || 0
+      centerX = minX + w / 2
+      centerY = minY + h / 2
     }
 
-    const corners = {
-      tl: { x: minX - padding, y: minY - padding },
-      tr: { x: minX + w + padding, y: minY - padding },
-      bl: { x: minX - padding, y: minY + h + padding },
-      br: { x: minX + w + padding, y: minY + h + padding }
-    }
+    // 🌟 四角相对于中心的偏移（世界坐标）
+    const cornerOffsets = [
+      { x: -w / 2 - padding, y: -h / 2 - padding },  // 左上
+      { x: w / 2 + padding, y: -h / 2 - padding },  // 右上
+      { x: -w / 2 - padding, y: h / 2 + padding },  // 左下
+      { x: w / 2 + padding, y: h / 2 + padding }   // 右下
+    ]
 
-    for (const [key, corner] of Object.entries(corners)) {
-      const dx = screenPos.x - corner.x
-      const dy = screenPos.y - corner.y
+    const corners = cornerOffsets.map(offset => {
+      let x = offset.x
+      let y = offset.y
+
+      // 🌟 如果有旋转，计算旋转后的偏移
+      if (el.rotation) {
+        const rad = (el.rotation * Math.PI) / 180
+        const cos = Math.cos(rad)
+        const sin = Math.sin(rad)
+        x = offset.x * cos - offset.y * sin
+        y = offset.x * sin + offset.y * cos
+      }
+
+      return {
+        x: (centerX + x) * scale + offsetX,
+        y: (centerY + y) * scale + offsetY
+      }
+    })
+
+    const keys = ['tl', 'tr', 'bl', 'br']
+    for (let i = 0; i < corners.length; i++) {
+      const dx = screenPos.x - corners[i].x
+      const dy = screenPos.y - corners[i].y
       if (Math.sqrt(dx * dx + dy * dy) < handleSize) {
-        return key
+        return keys[i]
       }
     }
     return null
@@ -215,135 +260,122 @@ export function useInteraction() {
     const now = Date.now()
     const { scale, offsetX, offsetY } = getViewport()
 
-    // 优先检测手柄（用已选中的元素）
-    // 优先检测手柄（单选或多选）
+    // ========== 手柄检测（单选和多选） ==========
     if (store.selectedIds.length >= 1) {
       const selectedElements = store.elements.filter(el => store.selectedIds.includes(el.id))
 
-      if (store.selectedIds.length > 1) {
-        const selectedElements = store.elements.filter(el => store.selectedIds.includes(el.id))
+      // 计算包围盒（单选时就是元素自己的包围盒）
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+      selectedElements.forEach(el => {
+        if (el.type === 'circle') {
+          minX = Math.min(minX, el.x - el.radius)
+          minY = Math.min(minY, el.y - el.radius)
+          maxX = Math.max(maxX, el.x + el.radius)
+          maxY = Math.max(maxY, el.y + el.radius)
+        } else if (el.type === 'triangle') {
+          el.points.forEach(p => {
+            minX = Math.min(minX, p.x)
+            minY = Math.min(minY, p.y)
+            maxX = Math.max(maxX, p.x)
+            maxY = Math.max(maxY, p.y)
+          })
+        } else {
+          minX = Math.min(minX, el.x)
+          minY = Math.min(minY, el.y)
+          maxX = Math.max(maxX, el.x + (el.width || 0))
+          maxY = Math.max(maxY, el.y + (el.height || 0))
+        }
+      })
 
-        // 计算整体包围盒
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
-        selectedElements.forEach(el => {
-          if (el.type === 'circle') {
-            minX = Math.min(minX, el.x - el.radius)
-            minY = Math.min(minY, el.y - el.radius)
-            maxX = Math.max(maxX, el.x + el.radius)
-            maxY = Math.max(maxY, el.y + el.radius)
-          } else if (el.type === 'triangle') {
-            el.points.forEach(p => {
-              minX = Math.min(minX, p.x)
-              minY = Math.min(minY, p.y)
-              maxX = Math.max(maxX, p.x)
-              maxY = Math.max(maxY, p.y)
-            })
-          } else {
-            minX = Math.min(minX, el.x)
-            minY = Math.min(minY, el.y)
-            maxX = Math.max(maxX, el.x + (el.width || 0))
-            maxY = Math.max(maxY, el.y + (el.height || 0))
-          }
+      const center = { x: minX + (maxX - minX) / 2, y: minY + (maxY - minY) / 2 }
+      const padding = 8
+
+      // 1. 检测旋转手柄
+      const rotateHandle = {
+        x: center.x,
+        y: minY - padding - 28 / scale
+      }
+      const screenRotate = {
+        x: rotateHandle.x * scale + offsetX,
+        y: rotateHandle.y * scale + offsetY
+      }
+      const rotDx = screenPos.x - screenRotate.x
+      const rotDy = screenPos.y - screenRotate.y
+      if (Math.sqrt(rotDx * rotDx + rotDy * rotDy) < 20) {
+        isRotating = true
+        const effectiveIds = getEffectiveSelectedIds(store.elements, store.selectedIds)
+        rotateStartRotations = effectiveIds.map(id => {
+          const el = store.elements.find(e => e.id === id)
+          return { id, rotation: el?.rotation || 0 }
         })
+        rotateStartAngle = Math.atan2(screenPos.y - center.y * scale - offsetY, screenPos.x - center.x * scale - offsetX)
+        canvasEl.style.cursor = 'grabbing'
+        return
+      }
 
-        const center = {
-          x: minX + (maxX - minX) / 2,
-          y: minY + (maxY - minY) / 2
-        }
-        const padding = 8
-        const rotateHandle = {
-          x: center.x,
-          y: minY - padding - 28 / scale
-        }
+      // 2. 检测缩放手柄
+      const corners = {
+        tl: { x: minX - padding, y: minY - padding },
+        tr: { x: maxX + padding, y: minY - padding },
+        bl: { x: minX - padding, y: maxY + padding },
+        br: { x: maxX + padding, y: maxY + padding }
+      }
 
-        const screenHandle = {
-          x: rotateHandle.x * scale + offsetX,
-          y: rotateHandle.y * scale + offsetY
+      let detectedHandle = null
+      for (const [key, corner] of Object.entries(corners)) {
+        const screenCorner = {
+          x: corner.x * scale + offsetX,
+          y: corner.y * scale + offsetY
         }
+        const dx = screenPos.x - screenCorner.x
+        const dy = screenPos.y - screenCorner.y
+        if (Math.sqrt(dx * dx + dy * dy) < 15) {
+          detectedHandle = key
+          break
+        }
+      }
 
-        const dx = screenPos.x - screenHandle.x
-        const dy = screenPos.y - screenHandle.y
-        if (Math.sqrt(dx * dx + dy * dy) < 20) {
-          isRotating = true
-          rotateStartRotations = selectedElements.map(el => ({
-            id: el.id,
-            rotation: el.rotation || 0
-          }))
-          const worldCenter = {
-            x: center.x * scale + offsetX,
-            y: center.y * scale + offsetY
+      if (detectedHandle) {
+        isResizing = true
+        resizeHandle = detectedHandle
+        resizeStartPos = worldPos
+
+        const effectiveIds = getEffectiveSelectedIds(store.elements, store.selectedIds)
+        const effectiveElements = effectiveIds.map(id => store.elements.find(e => e.id === id)).filter(Boolean)
+
+        // 单选和多选统一保存初始状态
+        if (effectiveElements.length === 1) {
+          const el = effectiveElements[0]
+          if (el.type === 'circle') {
+            resizeStartSize = { radius: el.radius, x: el.x, y: el.y }
+          } else if (el.type === 'triangle') {
+            resizeStartSize = { points: JSON.parse(JSON.stringify(el.points)) }
+          } else {
+            resizeStartSize = { x: el.x, y: el.y, width: el.width, height: el.height }
           }
-          rotateStartAngle = Math.atan2(screenPos.y - worldCenter.y, screenPos.x - worldCenter.x)
-          canvasEl.style.cursor = 'grabbing'
-          return
-        }
-        record()
-      } else {
-        // 单选：原有手柄检测逻辑
-        const selectedEl = selectedElements[0]
-        if (selectedEl) {
-          const handle = getResizeHandle(screenPos, selectedEl, scale, offsetX, offsetY)
-          if (handle) {
-            isResizing = true
-            resizeHandle = handle
-            resizeStartPos = worldPos
-
-            if (selectedEl.type === 'circle') {
-              resizeStartSize = { radius: selectedEl.radius, x: selectedEl.x, y: selectedEl.y }
-            } else if (selectedEl.type === 'triangle') {
-              resizeStartSize = { points: JSON.parse(JSON.stringify(selectedEl.points)) }
-            } else {
-              resizeStartSize = {
-                x: selectedEl.x,
-                y: selectedEl.y,
-                width: selectedEl.width,
-                height: selectedEl.height
-              }
-            }
-            isDragging = false
-            isPanning = false
-            canvasEl.style.cursor = 'nwse-resize'
-            return
+        } else {
+          resizeStartSize = {
+            elements: effectiveElements.map(el => ({
+              id: el.id, type: el.type, x: el.x, y: el.y,
+              radius: el.radius, width: el.width, height: el.height,
+              points: el.points ? JSON.parse(JSON.stringify(el.points)) : null
+            }))
           }
         }
+        isDragging = false
+        isPanning = false
+        canvasEl.style.cursor = 'nwse-resize'
+        return
       }
     }
 
-    // 检测旋转手柄（单选时）
-    if (store.selectedIds.length === 1) {
-      const selectedEl = store.elements.find(e => e.id === store.selectedIds[0])
-      if (selectedEl) {
-        const isRotate = getRotateHandle(screenPos, selectedEl, scale, offsetX, offsetY)
-        if (isRotate) {
-          isRotating = true
-
-          // 保存每个元素的初始旋转角度
-          const selectedElements = store.elements.filter(e => store.selectedIds.includes(e.id))
-          rotateStartRotations = selectedElements.map(el => ({
-            id: el.id,
-            rotation: el.rotation || 0
-          }))
-
-          const firstEl = selectedElements[0]
-          const center = getElementCenter(firstEl)
-          const worldCenter = {
-            x: center.x * scale + offsetX,
-            y: center.y * scale + offsetY
-          }
-          rotateStartAngle = Math.atan2(screenPos.y - worldCenter.y, screenPos.x - worldCenter.x)
-
-          canvasEl.style.cursor = 'grabbing'
-          return
-        }
-      }
-    }
-
-    // 找点击的元素
+    // ========== 点击元素检测 ==========
     const clickedEl = [...store.elements]
       .sort((a, b) => (b.zIndex || 0) - (a.zIndex || 0))
       .find(el => isPointInElement(worldPos.x, worldPos.y, el))
 
     if (clickedEl) {
+      // 双击检测
       if (now - globalLastClickTime < 300 && globalLastSelectedId === clickedEl.id) {
         if (clickedEl.type === 'text') {
           startEditing(clickedEl.id)
@@ -358,19 +390,24 @@ export function useInteraction() {
         toggleSelection(clickedEl.id)
         isDragging = false
       } else {
-        if (store.selectedIds.includes(clickedEl.id)) {
-          isDragging = true
-        } else {
-          setSelection(clickedEl.id)
-          isDragging = false
+        // 🌟 核心修复：如果点击的元素尚未被选中，才重置选中状态
+        if (!store.selectedIds.includes(clickedEl.id)) {
+          if (clickedEl.groupId) {
+            const groupElements = store.elements.filter(el => el.groupId === clickedEl.groupId)
+            store.selectedIds = groupElements.map(el => el.id)
+          } else {
+            setSelection(clickedEl.id)
+          }
         }
+        // 只要点中了元素（无论是单选还是多选集合中的一个），就开启拖拽
+        isDragging = true
       }
 
       lastMousePos = { x: screenPos.x, y: screenPos.y }
       isPanning = false
       isMarqueeSelecting = false
-
     } else {
+      // 点击空白
       if (isSpacePressed) {
         clearSelection()
         isPanning = true
@@ -384,11 +421,12 @@ export function useInteraction() {
         isDragging = false
       }
     }
+
     if (canvasEl) canvasEl.style.cursor = 'default'
   }
 
   const handleMouseMove = (e, canvasEl) => {
-    if (!canvasEl) return 
+    if (!canvasEl) return
     const screenPos = getScreenCoords(e, canvasEl)
     const { scale, offsetX, offsetY } = getViewport()
 
@@ -399,7 +437,8 @@ export function useInteraction() {
       const dx = worldPos.x - resizeStartPos.x
       const dy = worldPos.y - resizeStartPos.y
 
-      const selectedElements = store.elements.filter(el => store.selectedIds.includes(el.id))
+      const effectiveIds = getEffectiveSelectedIds(store.elements, store.selectedIds)  // 🌟
+      const selectedElements = effectiveIds.map(id => store.elements.find(e => e.id === id)).filter(Boolean)
       if (selectedElements.length === 0) return
 
       if (selectedElements.length > 1) {
@@ -418,7 +457,8 @@ export function useInteraction() {
     }
 
     if (isRotating) {
-      const selectedElements = store.elements.filter(el => store.selectedIds.includes(el.id))
+      const effectiveIds = getEffectiveSelectedIds(store.elements, store.selectedIds)  // 🌟
+      const selectedElements = effectiveIds.map(id => store.elements.find(e => e.id === id)).filter(Boolean)
       if (selectedElements.length === 0) return
 
       if (selectedElements.length === 1) {
@@ -489,22 +529,39 @@ export function useInteraction() {
       store.marqueeRect = rect
 
       import('../utils/math').then(({ isElementInRect }) => {
+        // 找出框内的元素
         const selected = store.elements.filter(el => isElementInRect(el, rect))
-        store.selectedIds = selected.map(el => el.id)
+
+        // 🌟 自动包含同组合的其他元素
+        const ids = new Set()
+        selected.forEach(el => {
+          ids.add(el.id)
+          if (el.groupId) {
+            store.elements.forEach(other => {
+              if (other.groupId === el.groupId) {
+                ids.add(other.id)
+              }
+            })
+          }
+        })
+
+        store.selectedIds = [...ids]
       })
       return
     }
 
     if (editingId.value) return
 
+    const effectiveIds = getEffectiveSelectedIds(store.elements, store.selectedIds)
     const dx = screenPos.x - lastMousePos.x
     const dy = screenPos.y - lastMousePos.y
 
     if (isDragging) {
+      const effectiveIds = getEffectiveSelectedIds(store.elements, store.selectedIds)
       const worldDx = dx / scale
       const worldDy = dy / scale
 
-      store.selectedIds.forEach(id => {
+      effectiveIds.forEach(id => {
         const el = store.elements.find(e => e.id === id)
         if (el) {
           if (el.type === 'triangle') {
@@ -561,7 +618,9 @@ export function useInteraction() {
     }
 
     if (isDragging) {
-      store.selectedIds.forEach(id => {
+      // 🌟 核心修复：拖拽结束时也要获取包含组合在内的有效 ID
+      const effectiveIds = getEffectiveSelectedIds(store.elements, store.selectedIds)
+      effectiveIds.forEach(id => {
         const el = store.elements.find(e => e.id === id)
         if (el) {
           if (el.type === 'triangle') {
@@ -667,7 +726,7 @@ export function useInteraction() {
       if (el.type === 'circle') {
         updateElement(el.id, {
           radius: Math.max(5, startEl.radius * scaleFactor),
-          x: cx + (startEl.x - cx) * scaleFactor,  // 位置也缩放
+          x: cx + (startEl.x - cx) * scaleFactor,
           y: cy + (startEl.y - cy) * scaleFactor
         })
       } else if (el.type === 'triangle') {
@@ -675,13 +734,11 @@ export function useInteraction() {
         const tcx = (points[0].x + points[1].x + points[2].x) / 3
         const tcy = (points[0].y + points[1].y + points[2].y) / 3
 
-        // 先缩放顶点
         const scaledPoints = points.map(p => ({
           x: tcx + (p.x - tcx) * scaleFactor,
           y: tcy + (p.y - tcy) * scaleFactor
         }))
 
-        // 再整体移动（相对于包围盒中心）
         const newTcx = cx + (tcx - cx) * scaleFactor
         const newTcy = cy + (tcy - cy) * scaleFactor
         const deltaX = newTcx - tcx
