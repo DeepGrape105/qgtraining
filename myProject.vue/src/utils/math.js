@@ -201,3 +201,62 @@ export function getElementCenter(el) {
     }
   }
 }
+
+/**
+ * 获取单个元素在世界坐标系下的准确外接矩形 (AABB)
+ */
+export function getElementAbsoluteBounds(el) {
+  const { x, y, width, height, rotation = 0, type } = el;
+
+  // 1. 对于圆形，旋转不改变其外接矩形（假设是正圆）
+  if (type === 'circle') {
+    return { minX: x, minY: y, maxX: x + width, maxY: y + height };
+  }
+
+  // 2. 对于三角形，通常由三个顶点定义
+  if (type === 'triangle') {
+    // 假设你的三角形有 points 数组，或者通过中心点和宽高计算
+    // 这里采用通用的：如果有点集按点集算，否则按旋转后的矩形框算
+    if (el.points) {
+      const xs = el.points.map(p => p.x);
+      const ys = el.points.map(p => p.y);
+      return {
+        minX: Math.min(...xs), minY: Math.min(...ys),
+        maxX: Math.max(...xs), maxY: Math.max(...ys)
+      };
+    }
+  }
+
+  // 3. 对于矩形、图片、文本：计算旋转后的四个角点
+  if (rotation === 0) {
+    return { minX: x, minY: y, maxX: x + width, maxY: y + height };
+  }
+
+  const rad = (rotation * Math.PI) / 180;
+  const cx = x + width / 2;
+  const cy = y + height / 2;
+
+  // 四个原始角点
+  const corners = [
+    { x: x, y: y },
+    { x: x + width, y: y },
+    { x: x, y: y + height },
+    { x: x + width, y: y + height }
+  ];
+
+  // 旋转后的角点
+  const rotatedCorners = corners.map(p => ({
+    x: cx + (p.x - cx) * Math.cos(rad) - (p.y - cy) * Math.sin(rad),
+    y: cy + (p.x - cx) * Math.sin(rad) + (p.y - cy) * Math.cos(rad)
+  }));
+
+  const xs = rotatedCorners.map(p => p.x);
+  const ys = rotatedCorners.map(p => p.y);
+
+  return {
+    minX: Math.min(...xs),
+    minY: Math.min(...ys),
+    maxX: Math.max(...xs),
+    maxY: Math.max(...ys)
+  };
+}

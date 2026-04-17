@@ -46,14 +46,6 @@
     <div class="tool-group">
       <!-- 单选：显示颜色选择器和删除 -->
       <template v-if="selectedCount === 1 && selectedEl">
-        <div class="color-picker-wrapper" v-if="selectedEl.type !== 'image'">
-          <label>填充：</label>
-          <input 
-            type="color" 
-            :value="selectedEl.fill || '#000000'" 
-            @input="e => updateElementFill(e.target.value)" 
-          />
-        </div>
         <button class="tool-btn delete-btn" @click="removeSelected">删除</button>
       </template>
       
@@ -135,7 +127,7 @@ const {addText} = useText()
 const { 
   addRect, addCircle, addTriangle, addImage, 
   removeSelected, updateSelected,
-  setElements,  getElements, getConfig, clearSelection,
+  setElements, getElements, getConfig, clearSelection,
   group, ungroup 
 } = useElements()
 

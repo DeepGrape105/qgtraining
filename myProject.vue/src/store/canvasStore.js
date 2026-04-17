@@ -25,6 +25,33 @@ export const useCanvasStore = defineStore('canvas', {
     marqueeRect: null
   }),
   getters: {
-    selection: (state) => state.selectedIds[0] || null 
+    selection: (state) => state.selectedIds[0] || null ,
+    // 【核心】计算所有元素构成的最大矩形边界
+    sceneBounds: (state) => {
+      if (state.elements.length === 0) {
+        return { minX: 0, minY: 0, maxX: window.innerWidth, maxY: window.innerHeight, width: window.innerWidth, height: window.innerHeight };
+      }
+
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+      state.elements.forEach(el => {
+        const bounds = getElementAbsoluteBounds(el);
+        minX = Math.min(minX, bounds.minX);
+        minY = Math.min(minY, bounds.minY);
+        maxX = Math.max(maxX, bounds.maxX);
+        maxY = Math.max(maxY, bounds.maxY);
+      });
+
+      // 留出 1000px 的缓冲区，模拟 Goodnotes 的无限感
+      const padding = 1000;
+      return {
+        minX: minX - padding,
+        minY: minY - padding,
+        maxX: maxX + padding,
+        maxY: maxY + padding,
+        width: (maxX - minX) + padding * 2,
+        height: (maxY - minY) + padding * 2
+      };
+    }
   }
 })

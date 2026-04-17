@@ -27,7 +27,7 @@ export default class Renderer {
 
     ctx.restore()
   }
-  
+
   static drawHighlight(ctx, el, scale) {
     let minX, minY, w, h
 
@@ -473,9 +473,11 @@ export default class Renderer {
           ctx.fillText(char, currentX, currentY);
 
           if (seg.underline) {
+            ctx.lineWidth = seg.bold ? 7 : 1;  // 🌟 加粗时线条也加粗
             this.drawLine(ctx, currentX, currentY + fontSize, charWidth, seg.color);
           }
           if (seg.strike) {
+            ctx.lineWidth = seg.bold ? 7  : 1;  // 🌟 加粗时线条也加粗
             this.drawLine(ctx, currentX, currentY + fontSize * 0.6, charWidth, seg.color);
           }
 
@@ -499,15 +501,17 @@ export default class Renderer {
             ctx.fillRect(currentX, currentY, wordWidth, fontSize);
           }
 
-          
+
           ctx.fillStyle = seg.color;
           ctx.fillText(word, currentX, currentY);
 
           if (seg.underline) {
-            this.drawLine(ctx, currentX, currentY + fontSize, wordWidth, seg.color);
+            ctx.lineWidth = seg.bold ? 7 : 1;  // 🌟 加粗时线条也加粗
+            this.drawLine(ctx, currentX, currentY + fontSize, charWidth, seg.color);
           }
           if (seg.strike) {
-            this.drawLine(ctx, currentX, currentY + fontSize * 0.6, wordWidth, seg.color);
+            ctx.lineWidth = seg.bold ? 7 : 1;  // 🌟 加粗时线条也加粗
+            this.drawLine(ctx, currentX, currentY + fontSize * 0.6, charWidth, seg.color);
           }
 
           currentX += wordWidth;
@@ -522,15 +526,14 @@ export default class Renderer {
     }
   }
 
-// 辅助方法：绘制线条（下划线/删除线）
-static drawLine(ctx, x, y, width, color) {
-  ctx.beginPath();
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 1;
-  ctx.moveTo(x, y);
-  ctx.lineTo(x + width, y);
-  ctx.stroke();
-}
+  // 辅助方法：绘制线条（下划线/删除线）
+  static drawLine(ctx, x, y, width, color) {
+    ctx.beginPath();
+    ctx.strokeStyle = color;
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + width, y);
+    ctx.stroke();
+  }
 
   static drawImageElement(ctx, el) {
     if (!el.url) return
@@ -598,54 +601,82 @@ static drawLine(ctx, x, y, width, color) {
 
 function parseRichText(html, defaultColor, defaultSize, defaultWeight, defaultFamily) {
   const segments = [];
-  let content = html.replace(/<\/?p>/g, '');
-  const tagStack = [];
-  let currentText = '';
 
-  for (let i = 0; i < content.length; i++) {
-    if (content[i] === '<') {
-      if (currentText) {
+  // 创建一个临时 DOM 元素来解析 HTML
+  const div = document.createElement('div');
+  div.innerHTML = html;
+
+  // 递归遍历 DOM 节点
+  function processNode(node, parentStyles = {}) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = node.textContent;
+      if (text) {
         segments.push({
-          text: currentText,
-          bold: tagStack.some(t => t.includes('strong') || t.includes('<b>') || t === 'b'),
-          italic: tagStack.some(t => t.includes('em') || t.includes('<i>') || t === 'i'),
-          underline: tagStack.some(t => t.includes('u') || t === 'u'),
-          strike: tagStack.some(t => t.includes('del') || t.includes('s') || t === 's'),
-          color: getColorFromStack(tagStack) || defaultColor,
-          backgroundColor: getBackgroundColorFromStack(tagStack) || '#00000000',
-          fontSize: defaultSize,
-          fontFamily: defaultFamily
+          text: text,
+          ...parentStyles
         });
-        currentText = '';
+      }
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      const tagName = node.tagName.toLowerCase();
+      const styles = { ...parentStyles };
+
+      // 计算当前节点的样式
+      const computedStyle = {};
+
+      // 检查 style 属性
+      const styleAttr = node.getAttribute('style');
+      if (styleAttr) {
+        const colorMatch = styleAttr.match(/color:\s*([^;]+)/);
+        if (colorMatch) computedStyle.color = colorMatch[1];
+
+        const bgMatch = styleAttr.match(/background-color:\s*([^;]+)/);
+        if (bgMatch) computedStyle.backgroundColor = bgMatch[1];
       }
 
-      const end = content.indexOf('>', i);
-      const tag = content.substring(i + 1, end);
-      i = end;
-
-      if (tag.startsWith('/')) {
-        tagStack.pop();
-      } else {
-        tagStack.push(tag);
+      // 处理标签
+      if (tagName === 'strong' || tagName === 'b') {
+        styles.bold = true;
       }
-    } else {
-      currentText += content[i];
+      if (tagName === 'em' || tagName === 'i') {
+        styles.italic = true;
+      }
+      if (tagName === 'u') {
+        styles.underline = true;
+      }
+      if (tagName === 's' || tagName === 'del' || tagName === 'strike') {
+        styles.strike = true;
+      }
+      if (tagName === 'mark') {
+        styles.backgroundColor = computedStyle.backgroundColor || '#ffff00';
+      }
+      if (tagName === 'span') {
+        // span 通常用于携带颜色样式
+        if (computedStyle.color) styles.color = computedStyle.color;
+        if (computedStyle.backgroundColor) styles.backgroundColor = computedStyle.backgroundColor;
+      }
+
+      // 确保默认值
+      styles.color = styles.color || defaultColor;
+      styles.fontSize = styles.fontSize || defaultSize;
+      styles.fontWeight = styles.fontWeight || defaultWeight;
+      styles.fontFamily = styles.fontFamily || defaultFamily;
+
+      // 递归处理子节点
+      node.childNodes.forEach(child => processNode(child, styles));
     }
   }
 
-  if (currentText) {
-    segments.push({
-      text: currentText,
-      bold: tagStack.some(t => t.includes('strong') || t.includes('<b>') || t === 'b'),
-      italic: tagStack.some(t => t.includes('em') || t.includes('<i>') || t === 'i'),
-      underline: tagStack.some(t => t.includes('u') || t === 'u'),
-      strike: tagStack.some(t => t.includes('del') || t.includes('s') || t === 's'),
-      color: getColorFromStack(tagStack) || defaultColor,
-      backgroundColor: getBackgroundColorFromStack(tagStack) || '#00000000',
-      fontSize: defaultSize,
-      fontFamily: defaultFamily
-    });
-  }
+  processNode(div, {
+    color: defaultColor,
+    fontSize: defaultSize,
+    fontWeight: defaultWeight,
+    fontFamily: defaultFamily,
+    bold: false,
+    italic: false,
+    underline: false,
+    strike: false,
+    backgroundColor: null
+  });
 
   return segments;
 }

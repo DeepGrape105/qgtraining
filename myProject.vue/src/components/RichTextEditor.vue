@@ -21,6 +21,7 @@
       <button @click="editor.chain().focus().toggleBold().run()" :class="{ 'is-active': editor.isActive('bold') }">加粗</button>
       <button @click="editor.chain().focus().toggleItalic().run()" :class="{ 'is-active': editor.isActive('italic') }">斜体</button>
       <button @click="editor.chain().focus().toggleStrike().run()" :class="{ 'is-active': editor.isActive('strike') }">删除线</button>
+      <button @click="editor.chain().focus().toggleUnderline().run()" :class="{ 'is-active': editor.isActive('underline') }">下划线</button>
     </bubble-menu>
 
     <editor-content :editor="editor" class="tiptap-wrapper" />
@@ -35,6 +36,7 @@ import { Extension } from '@tiptap/core'
 import { useCanvasStore } from '../store/canvasStore'
 import { useText } from '../composables/useText'
 import { useHistory } from '../composables/useHistory'
+import Underline from '@tiptap/extension-underline'
 
 const store = useCanvasStore()
 const { editingId, editingText, saveText, cancelEditing } = useText()
@@ -64,6 +66,7 @@ const editor = useEditor({
   extensions: [
     StarterKit,
     EnterShortcut // 挂载自定义快捷键
+    ,Underline
   ],
   onUpdate: ({ editor }) => {
     if (editingId.value) {
@@ -171,13 +174,13 @@ onBeforeUnmount(() => {
   left: 0;
   padding: 0;
   margin: 0;
-  background: transparent;
+  background: transparent !important;   /* ← 确保透明 */
 }
 
-/* TipTap 编辑器核心样式 */
 .tiptap-wrapper {
   width: 100%;
   height: 100%;
+  background: transparent !important;   /* ← 新增 */
 }
 
 :deep(.ProseMirror) {
@@ -185,13 +188,15 @@ onBeforeUnmount(() => {
   height: 100%;
   outline: none !important;
   border: none !important;
-  padding: 8px; /* 与你 Renderer 内置的 8px padding 完美重合 */
+  padding: 8px;
   margin: 0;
   background: transparent;
   color: inherit;
   font-size: inherit;
   font-family: inherit;
-  font-weight: inherit;
+  font-weight: inherit;      /* ← 新增 */
+  font-style: inherit;       /* ← 新增 */
+  text-decoration: inherit;  /* ← 新增 */
   line-height: 1.4;
   caret-color: #000000;
   box-sizing: border-box;

@@ -160,10 +160,17 @@ const editorStyle = computed(() => {
   display: inline;
 }
 
+:deep(.ProseMirror strong em),
+:deep(.ProseMirror em strong) {
+  font-weight: bold !important;
+  text-decoration: line-through !important;
+  display: inline;
+}
+
 :deep(.ProseMirror em u),
 :deep(.ProseMirror u em) {
   font-style: italic !important;
-  text-decoration: underline !important;
+  text-decoration: bold !important;
   display: inline;
 }
 
@@ -173,6 +180,14 @@ const editorStyle = computed(() => {
   text-decoration: line-through !important;
   display: inline;
 }
+
+:deep(.ProseMirror u s),
+:deep(.ProseMirror s u) {
+  text-decoration: underline !important;
+  text-decoration: line-through !important;
+  display: inline;
+}
+
 
 :deep(.ProseMirror strong em u),
 :deep(.ProseMirror strong u em),

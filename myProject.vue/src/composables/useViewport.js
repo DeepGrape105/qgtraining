@@ -27,11 +27,13 @@ export function useViewport() {
     store.viewport = { offsetX: 0, offsetY: 0, scale: 1 }
   }
 
+  const MIN_SCALE = 0.15;
+  const MAX_SCALE = 4.0;
   /**
    * 放大（以指定屏幕坐标为中心）
    */
   const zoomIn = (centerX, centerY) => {
-    const newScale = Math.min(store.viewport.scale * 1.2, 10)  // 最大 10 倍
+    const newScale = Math.min(store.viewport.scale * 1.2, MAX_SCALE)  
     const scaleChange = newScale / store.viewport.scale
     store.viewport.offsetX = centerX - (centerX - store.viewport.offsetX) * scaleChange
     store.viewport.offsetY = centerY - (centerY - store.viewport.offsetY) * scaleChange
@@ -42,7 +44,7 @@ export function useViewport() {
    * 缩小（以指定屏幕坐标为中心）
    */
   const zoomOut = (centerX, centerY) => {
-    const newScale = Math.max(store.viewport.scale * 0.8, 0.05)  // 最小 0.05 倍
+    const newScale = Math.max(store.viewport.scale * 0.8, MIN_SCALE)  
     const scaleChange = newScale / store.viewport.scale
     store.viewport.offsetX = centerX - (centerX - store.viewport.offsetX) * scaleChange
     store.viewport.offsetY = centerY - (centerY - store.viewport.offsetY) * scaleChange

@@ -158,23 +158,22 @@
         </div>
       </div>
 
-      <!-- 外观样式（所有类型都有） -->
+      <!-- 外观样式 -->
        
       <div class="prop-group">
         <div class="group-title">外观样式</div> 
 
-         <div class="prop-row">
+         <div class="prop-row" v-if="selectedEl.type !== 'text' && selectedEl.type !== 'image'">
           <div class="input-item">
             <label>填充颜色</label>
             <input type="color" v-model="selectedEl.fill" @input="onValueChange" />
           </div>
         </div>
 
-         <div class="prop-row">
-          <div class="input-item">
-            <label>背景颜色</label>
-            <input type="color" v-model="selectedEl.backgroundColor" @input="onValueChange" />
-          </div>
+        <div  class="prop-row"></div v-if="selectedEl.type === 'text'">
+        <div class="input-item">
+          <label>背景颜色</label>
+          <input type="color" v-model="selectedEl.backgroundColor" @input="onValueChange" />
         </div>
 
         <div class="prop-row">
@@ -284,19 +283,14 @@ const applyTextStyle = (type) => {
   else if (type === 'underline') chain.toggleUnderline().run()
   else if (type === 'strike') chain.toggleStrike().run()
   
-  // 🌟 核心修复：修改样式后立即更新 richText 并强制重算高度
   if (selectedEl.value) {
+    // 保存富文本内容到元素
     selectedEl.value.richText = editor.value.getHTML()
-    
-    // 强制触发一次 Canvas 的高度计算逻辑
-    const tempCtx = document.createElement('canvas').getContext('2d')
-    // 调用你的渲染器方法，确保 el.height 被物理更新
-    TextRenderer.drawText(tempCtx, selectedEl.value) 
-    
-    onValueChange() 
+    // 触发画布重绘
+    store.elements = [...store.elements]
+    onValueChange()
   }
 }
-
 // 设置选中文字颜色
 const setTextColor = (color) => {
   if (!editor.value || !editingId.value) return

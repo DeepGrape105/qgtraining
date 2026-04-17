@@ -73,7 +73,7 @@ export function useInteraction() {
 
   const getResizeHandle = (screenPos, el, scale, offsetX, offsetY) => {
     const handleSize = 15
-    const padding = 10
+    const padding = 8 / scale
 
     let minX, minY, w, h, centerX, centerY
 
@@ -172,8 +172,9 @@ export function useInteraction() {
       y: minY + h / 2
     }
 
-    const padding = 8
-    const handleY = minY - padding - 28 / scale
+    const padding = 8 / scale
+    const rotateHandleDistance = 28 / scale
+    const handleY = minY - padding - rotateHandleDistance
     const handleX = center.x
 
     // 如果有旋转，计算旋转后的位置
@@ -261,10 +262,11 @@ export function useInteraction() {
     const { scale, offsetX, offsetY } = getViewport()
 
     // ========== 手柄检测（单选和多选） ==========
+    // ========== 手柄检测（单选和多选） ==========
     if (store.selectedIds.length >= 1) {
       const selectedElements = store.elements.filter(el => store.selectedIds.includes(el.id))
 
-      // 计算包围盒（单选时就是元素自己的包围盒）
+      // 计算包围盒（用于多选和旋转中心）
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
       selectedElements.forEach(el => {
         if (el.type === 'circle') {
@@ -288,20 +290,33 @@ export function useInteraction() {
       })
 
       const center = { x: minX + (maxX - minX) / 2, y: minY + (maxY - minY) / 2 }
-      const padding = 8
+      const padding = 8 / scale   // 和绘制保持一致
+      const w = maxX - minX
+      const h = maxY - minY
 
-      // 1. 检测旋转手柄
-      const rotateHandle = {
-        x: center.x,
-        y: minY - padding - 28 / scale
+      // --- 1. 旋转手柄检测 ---
+      let rotateDetected = false
+      if (store.selectedIds.length === 1) {
+        // 单选：用专门的检测函数（已处理旋转）
+        rotateDetected = getRotateHandle(screenPos, selectedElements[0], scale, offsetX, offsetY)
+      } else {
+        // 多选：暂时用原来的逻辑
+        const rotateHandle = {
+          x: center.x,
+          y: minY - padding - 28 / scale
+        }
+        const screenRotate = {
+          x: rotateHandle.x * scale + offsetX,
+          y: rotateHandle.y * scale + offsetY
+        }
+        const rotDx = screenPos.x - screenRotate.x
+        const rotDy = screenPos.y - screenRotate.y
+        if (Math.sqrt(rotDx * rotDx + rotDy * rotDy) < 20) {
+          rotateDetected = true
+        }
       }
-      const screenRotate = {
-        x: rotateHandle.x * scale + offsetX,
-        y: rotateHandle.y * scale + offsetY
-      }
-      const rotDx = screenPos.x - screenRotate.x
-      const rotDy = screenPos.y - screenRotate.y
-      if (Math.sqrt(rotDx * rotDx + rotDy * rotDy) < 20) {
+
+      if (rotateDetected) {
         isRotating = true
         const effectiveIds = getEffectiveSelectedIds(store.elements, store.selectedIds)
         rotateStartRotations = effectiveIds.map(id => {
@@ -313,25 +328,30 @@ export function useInteraction() {
         return
       }
 
-      // 2. 检测缩放手柄
-      const corners = {
-        tl: { x: minX - padding, y: minY - padding },
-        tr: { x: maxX + padding, y: minY - padding },
-        bl: { x: minX - padding, y: maxY + padding },
-        br: { x: maxX + padding, y: maxY + padding }
-      }
-
+      // --- 2. 缩放手柄检测 ---
       let detectedHandle = null
-      for (const [key, corner] of Object.entries(corners)) {
-        const screenCorner = {
-          x: corner.x * scale + offsetX,
-          y: corner.y * scale + offsetY
+      if (store.selectedIds.length === 1) {
+        // 单选：用专门的检测函数（已处理旋转）
+        detectedHandle = getResizeHandle(screenPos, selectedElements[0], scale, offsetX, offsetY)
+      } else {
+        // 多选：用原来的包围盒四角
+        const corners = {
+          tl: { x: minX - padding, y: minY - padding },
+          tr: { x: maxX + padding, y: minY - padding },
+          bl: { x: minX - padding, y: maxY + padding },
+          br: { x: maxX + padding, y: maxY + padding }
         }
-        const dx = screenPos.x - screenCorner.x
-        const dy = screenPos.y - screenCorner.y
-        if (Math.sqrt(dx * dx + dy * dy) < 15) {
-          detectedHandle = key
-          break
+        for (const [key, corner] of Object.entries(corners)) {
+          const screenCorner = {
+            x: corner.x * scale + offsetX,
+            y: corner.y * scale + offsetY
+          }
+          const dx = screenPos.x - screenCorner.x
+          const dy = screenPos.y - screenCorner.y
+          if (Math.sqrt(dx * dx + dy * dy) < 15) {
+            detectedHandle = key
+            break
+          }
         }
       }
 
@@ -343,7 +363,6 @@ export function useInteraction() {
         const effectiveIds = getEffectiveSelectedIds(store.elements, store.selectedIds)
         const effectiveElements = effectiveIds.map(id => store.elements.find(e => e.id === id)).filter(Boolean)
 
-        // 单选和多选统一保存初始状态
         if (effectiveElements.length === 1) {
           const el = effectiveElements[0]
           if (el.type === 'circle') {
@@ -370,9 +389,72 @@ export function useInteraction() {
     }
 
     // ========== 点击元素检测 ==========
-    const clickedEl = [...store.elements]
-      .sort((a, b) => (b.zIndex || 0) - (a.zIndex || 0))
-      .find(el => isPointInElement(worldPos.x, worldPos.y, el))
+
+    
+    // ========== 点击元素检测 ==========
+    let clickedEl = null
+
+    // 🌟 优先检查：点击位置是否在已选中元素的包围盒内（包括 padding 区域）
+    if (store.selectedIds.length > 0) {
+      const selectedElements = store.elements.filter(el => store.selectedIds.includes(el.id))
+
+      // 计算选中元素的总包围盒
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+      selectedElements.forEach(el => {
+        if (el.type === 'circle') {
+          minX = Math.min(minX, el.x - el.radius)
+          minY = Math.min(minY, el.y - el.radius)
+          maxX = Math.max(maxX, el.x + el.radius)
+          maxY = Math.max(maxY, el.y + el.radius)
+        } else if (el.type === 'triangle') {
+          el.points.forEach(p => {
+            minX = Math.min(minX, p.x)
+            minY = Math.min(minY, p.y)
+            maxX = Math.max(maxX, p.x)
+            maxY = Math.max(maxY, p.y)
+          })
+        } else {
+          minX = Math.min(minX, el.x)
+          minY = Math.min(minY, el.y)
+          maxX = Math.max(maxX, el.x + (el.width || 0))
+          maxY = Math.max(maxY, el.y + (el.height || 0))
+        }
+      })
+
+      // 加上选中框的 padding（和绘制保持一致）
+      const boxPadding = 8 / scale
+      const expandedMinX = minX - boxPadding
+      const expandedMinY = minY - boxPadding
+      const expandedMaxX = maxX + boxPadding
+      const expandedMaxY = maxY + boxPadding
+
+      // 检查点击是否在扩展包围盒内
+      if (worldPos.x >= expandedMinX && worldPos.x <= expandedMaxX &&
+        worldPos.y >= expandedMinY && worldPos.y <= expandedMaxY) {
+        // 在包围盒内，再检查是否真的点中了某个元素
+        clickedEl = [...store.elements]
+          .sort((a, b) => (b.zIndex || 0) - (a.zIndex || 0))
+          .find(el => isPointInElement(worldPos.x, worldPos.y, el))
+
+        // 即使没有点中具体元素，只要在包围盒内，就启动拖拽（不取消选中）
+        if (!clickedEl) {
+          // 在选中框内空白处点击，不取消选中，直接开启拖拽
+          isDragging = true
+          lastMousePos = { x: screenPos.x, y: screenPos.y }
+          isPanning = false
+          isMarqueeSelecting = false
+          if (canvasEl) canvasEl.style.cursor = 'default'
+          return
+        }
+      }
+    }
+
+    // 如果上面没有找到 clickedEl，继续正常检测
+    if (!clickedEl) {
+      clickedEl = [...store.elements]
+        .sort((a, b) => (b.zIndex || 0) - (a.zIndex || 0))
+        .find(el => isPointInElement(worldPos.x, worldPos.y, el))
+    }
 
     if (clickedEl) {
       // 双击检测
@@ -390,7 +472,7 @@ export function useInteraction() {
         toggleSelection(clickedEl.id)
         isDragging = false
       } else {
-        // 🌟 核心修复：如果点击的元素尚未被选中，才重置选中状态
+        // 如果点击的元素尚未被选中，才重置选中状态
         if (!store.selectedIds.includes(clickedEl.id)) {
           if (clickedEl.groupId) {
             const groupElements = store.elements.filter(el => el.groupId === clickedEl.groupId)
@@ -399,7 +481,7 @@ export function useInteraction() {
             setSelection(clickedEl.id)
           }
         }
-        // 只要点中了元素（无论是单选还是多选集合中的一个），就开启拖拽
+        // 只要点中了元素，就开启拖拽
         isDragging = true
       }
 
