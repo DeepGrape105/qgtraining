@@ -1,10 +1,17 @@
 /**
    * 内部工具函数（generateId, getBaseElement）
-   * 元素操作（addRect, addCircle, addTriangle, addImage, removeSelected, updateElement, updateSelected）
-   * 批量操作（setElements）
-   * 画布配置操作（updateCanvasConfig）
-    * 选中操作（clearSelection, setSelection, getSelectedElement）
-    * 持久化恢复（restoreState）
+   * 元素添加（addRect, addCircle, addTriangle, addImage）
+   * 元素删除（removeSelected）
+   * 元素更新（updateElement, updateSelected）
+   * 剪贴板操作（copyElement, pasteElement）
+   * 批量操作（setElements, getElements）
+   * 选中操作（clearSelection, setSelection, getSelectedElement, getSelection, toggleSelection）
+   * 层级操作（bringToFront, sendToBack）
+   * 状态切换（toggleLock, toggleVisible）
+   * 旋转操作（rotateElement, rotateSelected）
+   * 组合操作（group, ungroup）
+   * 画布配置（getConfig, setConfig）
+   * 持久化恢复（restoreState）
    */
 
 import { useCanvasStore } from '../store/canvasStore'

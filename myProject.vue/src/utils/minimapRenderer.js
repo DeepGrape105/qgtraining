@@ -1,4 +1,4 @@
-// src/utils/minimapRenderer.js
+//绘制小地图
 import { useCanvasStore } from '../store/canvasStore'
 
 export function drawMinimap(ctx, size, bounds, minimapScale, getViewportRect, vw, vh) {

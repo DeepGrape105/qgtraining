@@ -1,18 +1,34 @@
-// src/composables/Renderer.js
+//渲染逻辑层，负责将各种图形元素绘制到  Canvas 上
 import { useCanvasStore } from '../store/canvasStore';
 import { useText } from './useText'
-import { getElementCenter } from '../utils/math'
+import { parseRichText } from "../utils/textParser";
+import { getElementBounds, rotatePoint } from '../utils/geometry'
 
+/**
+ * Renderer 类：负责将各种图形元素绘制到 HTML5 Canvas 上
+ * 采用静态方法设计，作为无状态的渲染工具集使用
+ */
 export default class Renderer {
+  // 图片缓存池：避免重复创建 Image 对象导致的闪烁及性能开销
   static imageCache = new Map();
 
+  /**
+   * 渲染入口方法
+   * @param {CanvasRenderingContext2D} ctx - 画布上下文
+   * @param {Object} element - 待渲染的元素数据对象
+   * @param {Object} options - 渲染配置（如是否跳过高亮）
+   */
   static draw(ctx, element, options = {}) {
     const store = useCanvasStore()
+    // 边界检查：若上下文丢失、元素为空或被隐藏，则跳过渲染
     if (!ctx || !element || element.isVisible === false) return
 
-    ctx.save()
+    ctx.save() // 开启独立状态栈，防止透明度、变换等属性污染全局
+
+    // 应用透明度：结合锁定状态的视觉反馈
     ctx.globalAlpha = (element.opacity ?? 1) * (element.isLocked ? 0.8 : 1)
 
+    // 多态分发：根据元素类型调用对应的私有绘制方法
     switch (element.type) {
       case 'rect': this.drawRect(ctx, element); break
       case 'circle': this.drawCircle(ctx, element); break
@@ -21,49 +37,27 @@ export default class Renderer {
       case 'image': this.drawImageElement(ctx, element); break
     }
 
+    // 选中反馈绘制：在元素本体之上覆盖辅助线和操作手柄
     if (!options.skipHighlight && store.selectedIds.includes(element.id)) {
       this.drawHighlight(ctx, element, store.viewport.scale)
     }
 
-    ctx.restore()
+    ctx.restore() // 恢复渲染上下文，确保下一元素渲染环境纯净
   }
 
+  /**
+   * 绘制选中状态的高亮边框及控制点（四角缩放手柄 + 顶部旋转手柄）
+   */
   static drawHighlight(ctx, el, scale) {
-    let minX, minY, w, h
+    const bounds = getElementBounds(el)
+    const { minX, minY, width: w, height: h, centerX, centerY } = bounds
+    const center = { x: centerX, y: centerY }
 
-    if (el.type === 'triangle') {
-      const xs = el.points.map(p => p.x)
-      const ys = el.points.map(p => p.y)
-      minX = Math.min(...xs)
-      minY = Math.min(...ys)
-      w = Math.max(...xs) - minX
-      h = Math.max(...ys) - minY
-    } else if (el.type === 'circle') {
-      minX = el.x - el.radius
-      minY = el.y - el.radius
-      w = el.radius * 2
-      h = el.radius * 2
-    } else if (el.type === 'text') {
-      minX = el.x
-      minY = el.y
-      w = el.width || 100
-      h = el.height || 20
-    } else {
-      minX = el.x
-      minY = el.y
-      w = el.width
-      h = el.height
-    }
-
-    const center = {
-      x: minX + w / 2,
-      y: minY + h / 2
-    }
-
+    // 屏幕适配：根据当前视口缩放比例调整手柄视觉大小
     const padding = 8 / scale
     const handleSize = 10 / scale
 
-    // 四角手柄
+    // 1. 计算坐标空间：定义四角手柄相对于元素中心未旋转时的偏移
     const cornerOffsets = [
       { x: -w / 2 - padding, y: -h / 2 - padding },
       { x: w / 2 + padding, y: -h / 2 - padding },
@@ -71,52 +65,19 @@ export default class Renderer {
       { x: w / 2 + padding, y: h / 2 + padding }
     ]
 
+    // 2. 变换计算：将偏移点应用旋转算法，得到最终在 Canvas 上的物理坐标
     const corners = cornerOffsets.map(offset => {
-      let x = offset.x
-      let y = offset.y
-      if (el.rotation) {
-        const rad = (el.rotation * Math.PI) / 180
-        const cos = Math.cos(rad)
-        const sin = Math.sin(rad)
-        x = offset.x * cos - offset.y * sin
-        y = offset.x * sin + offset.y * cos
-      }
-      return { x: center.x + x, y: center.y + y }
+      const point = { x: center.x + offset.x, y: center.y + offset.y }
+      return rotatePoint(point, center, el.rotation)
     })
 
-    // 🌟 顶部边中点（连接线起点）
-    const topMidOffset = { x: 0, y: -h / 2 - padding }
-    let topMidX = topMidOffset.x
-    let topMidY = topMidOffset.y
-    if (el.rotation) {
-      const rad = (el.rotation * Math.PI) / 180
-      const cos = Math.cos(rad)
-      const sin = Math.sin(rad)
-      topMidX = topMidOffset.x * cos - topMidOffset.y * sin
-      topMidY = topMidOffset.x * sin + topMidOffset.y * cos
-    }
-    const topMid = {
-      x: center.x + topMidX,
-      y: center.y + topMidY
-    }
+    const topMidPoint = { x: center.x, y: center.y - h / 2 - padding }
+    const topMid = rotatePoint(topMidPoint, center, el.rotation)
 
-    // 🌟 旋转手柄：从顶部中点向外延伸 28px
-    const rotateOffset = { x: 0, y: -h / 2 - padding - 28 / scale }
-    let rotateX = rotateOffset.x
-    let rotateY = rotateOffset.y
-    if (el.rotation) {
-      const rad = (el.rotation * Math.PI) / 180
-      const cos = Math.cos(rad)
-      const sin = Math.sin(rad)
-      rotateX = rotateOffset.x * cos - rotateOffset.y * sin
-      rotateY = rotateOffset.x * sin + rotateOffset.y * cos
-    }
-    const rotateHandle = {
-      x: center.x + rotateX,
-      y: center.y + rotateY
-    }
+    const rotatePointOffset = { x: center.x, y: center.y - h / 2 - padding - 28 / scale }
+    const rotateHandle = rotatePoint(rotatePointOffset, center, el.rotation)
 
-    // 画选中框
+    // 绘制旋转框：此处需进入旋转坐标系绘制
     ctx.save()
     if (el.rotation) {
       ctx.translate(center.x, center.y)
@@ -129,16 +90,16 @@ export default class Renderer {
     ctx.strokeRect(minX - padding, minY - padding, w + padding * 2, h + padding * 2)
     ctx.restore()
 
-    // 画连接线（从顶部中点到旋转手柄）
+    // 绘制旋转手柄的连接直线
     ctx.beginPath()
     ctx.strokeStyle = '#1890ff'
     ctx.lineWidth = 1.5 / scale
-    ctx.setLineDash([])  // 实线
+    ctx.setLineDash([])
     ctx.moveTo(topMid.x, topMid.y)
     ctx.lineTo(rotateHandle.x, rotateHandle.y)
     ctx.stroke()
 
-    // 画四角手柄（白色填充，蓝色边框）
+    // 绘制四角缩放手柄（圆点）
     ctx.fillStyle = '#ffffff'
     ctx.strokeStyle = '#1890ff'
     corners.forEach(corner => {
@@ -148,25 +109,29 @@ export default class Renderer {
       ctx.stroke()
     })
 
-    // 🌟 画旋转手柄（Word 风格：绿色实心圆点）
+    // 绘制旋转手柄（带投影的特殊设计）
     ctx.beginPath()
-    ctx.fillStyle = '#4CAF50'  // 绿色
+    ctx.fillStyle = '#4CAF50'
     ctx.shadowColor = 'rgba(0, 0, 0, 0.2)'
     ctx.shadowBlur = 4 / scale
     ctx.arc(rotateHandle.x, rotateHandle.y, handleSize / 1.5, 0, Math.PI * 2)
     ctx.fill()
-    ctx.shadowColor = 'transparent'  // 取消阴影
+    ctx.shadowColor = 'transparent'
 
-    // 加一个小白点增加立体感
+    // 绘制手柄上的反光小白点
     ctx.beginPath()
     ctx.fillStyle = '#ffffff'
     ctx.arc(rotateHandle.x - 2 / scale, rotateHandle.y - 2 / scale, handleSize / 6, 0, Math.PI * 2)
     ctx.fill()
   }
 
+  /**
+   * 绘制矩形元素
+   * 逻辑区分：对于无旋转元素使用直接路径绘制（性能更优），有旋转元素应用旋转变换
+   */
   static drawRect(ctx, el) {
     if (!el.rotation) {
-      // 无旋转：直接画
+      // 路径逻辑：填充 -> 描边
       if (el.backgroundColor) {
         ctx.fillStyle = el.backgroundColor
         ctx.fillRect(el.x, el.y, el.width, el.height)
@@ -179,6 +144,7 @@ export default class Renderer {
         const halfStroke = el.strokeWidth / 2
         ctx.strokeStyle = el.stroke
         ctx.lineWidth = el.strokeWidth
+        // 描边矩形：需考虑 lineWidth 导致的外扩量
         ctx.strokeRect(
           el.x - halfStroke,
           el.y - halfStroke,
@@ -189,7 +155,7 @@ export default class Renderer {
       return
     }
 
-    // 有旋转：用变换绘制
+    // 矩阵变换逻辑
     const center = {
       x: el.x + el.width / 2,
       y: el.y + el.height / 2
@@ -223,11 +189,14 @@ export default class Renderer {
     ctx.restore()
   }
 
+  /**
+   * 绘制圆形元素
+   */
   static drawCircle(ctx, el) {
+    // 视觉修正：计算包含描边厚度后的总半径
     const radius = el.strokeWidth > 0 ? el.radius + el.strokeWidth / 2 : el.radius
     const center = { x: el.x, y: el.y }
 
-    // 应用旋转
     if (el.rotation) {
       ctx.save()
       ctx.translate(center.x, center.y)
@@ -251,20 +220,22 @@ export default class Renderer {
       ctx.lineWidth = el.strokeWidth
       ctx.stroke()
     }
-    if (el.rotation) {
-      ctx.restore()
-    }
+    if (el.rotation) ctx.restore()
   }
 
+  /**
+   * 绘制三角形元素
+   * 基于 points 数组绘制，并根据几何中心进行旋转
+   */
   static drawTriangle(ctx, el) {
     if (!el.points || el.points.length < 3) return
 
+    // 获取形心（重心）作为旋转支点
     const center = {
       x: (el.points[0].x + el.points[1].x + el.points[2].x) / 3,
       y: (el.points[0].y + el.points[1].y + el.points[2].y) / 3
     }
 
-    // 应用旋转
     if (el.rotation) {
       ctx.save()
       ctx.translate(center.x, center.y)
@@ -272,7 +243,7 @@ export default class Renderer {
       ctx.translate(-center.x, -center.y)
     }
 
-    // 计算扩展后的顶点（考虑边框）
+    // 边框溢出处理：计算顶点向外扩增后的坐标
     let points = el.points
     if (el.stroke && el.strokeWidth > 0 && el.stroke !== '#00000000') {
       const halfStroke = el.strokeWidth / 2
@@ -307,13 +278,15 @@ export default class Renderer {
       ctx.stroke()
     }
 
-    if (el.rotation) {
-      ctx.restore()
-    }
+    if (el.rotation) ctx.restore()
   }
 
+  /**
+   * 复杂渲染：文本与富文本绘制
+   * 包含：动态高度计算、自动换行算法（中英文分词）、下划线/删除线渲染
+   */
   static drawText(ctx, el) {
-    const { editingId } = useText();
+    const { editingId } = useText()
     const text = String(el.text || '');
     const padding = el.padding || 8;
     const boxWidth = el.width || 200;
@@ -323,10 +296,11 @@ export default class Renderer {
     const fontFamily = el.fontFamily || 'Arial';
     const lineHeight = fontSize * 1.4;
 
-    // --- 第一步：计算高度 ---
+    // --- 第一步：布局测量（预计算动态高度） ---
     ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
     const displayText = (editingId.value === el.id && text === '') ? ' ' : text;
 
+    // 分词并执行换行模拟
     const chars = displayText.split('');
     const tempLines = [];
     let tempLine = '';
@@ -346,18 +320,19 @@ export default class Renderer {
     }
     tempLines.push(tempLine);
 
+    // 回写元素高度：保证包围盒随文字内容动态拉伸
     const neededHeight = tempLines.length * lineHeight + padding * 2;
     const boxHeight = Math.max(neededHeight, fontSize + padding * 2);
     el.height = boxHeight;
 
-    // --- 第二步：计算实际需要的宽度（根据富文本）---
+    // --- 第二步：解析富文本片段 ---
     const richText = el.richText || displayText;
     const segments = parseRichText(richText, el.fill || '#000000', fontSize, fontWeight, fontFamily);
 
+    // 计算实际需要的最大宽度，用于绘制背景框
     let maxLineWidth = 0;
     segments.forEach(seg => {
       if (seg.text === '\n') return;
-
       let fontStyle = '';
       if (seg.bold) fontStyle += 'bold ';
       if (seg.italic) fontStyle += 'italic ';
@@ -365,9 +340,7 @@ export default class Renderer {
 
       const isChinese = /[\u4e00-\u9fa5]/.test(seg.text);
       let line = '';
-
       if (isChinese) {
-        // 中文：逐字符
         const chars = seg.text.split('');
         for (let char of chars) {
           const testLine = line + char;
@@ -375,12 +348,9 @@ export default class Renderer {
           if (metrics.width > maxWidth && line.length > 0) {
             maxLineWidth = Math.max(maxLineWidth, ctx.measureText(line).width);
             line = char;
-          } else {
-            line = testLine;
-          }
+          } else { line = testLine; }
         }
       } else {
-        // 英文：按单词
         const words = seg.text.split(' ');
         for (let word of words) {
           const testLine = line + (line ? ' ' : '') + word;
@@ -388,22 +358,14 @@ export default class Renderer {
           if (metrics.width > maxWidth && line.length > 0) {
             maxLineWidth = Math.max(maxLineWidth, ctx.measureText(line).width);
             line = word;
-          } else {
-            line = line ? line + ' ' + word : word;
-          }
+          } else { line = line ? line + ' ' + word : word; }
         }
       }
-      if (line) {
-        maxLineWidth = Math.max(maxLineWidth, ctx.measureText(line).width);
-      }
+      if (line) maxLineWidth = Math.max(maxLineWidth, ctx.measureText(line).width);
     });
 
     const actualWidth = Math.max(boxWidth, maxLineWidth + padding * 2);
-
-    const center = {
-      x: el.x + actualWidth / 2,
-      y: el.y + boxHeight / 2
-    }
+    const center = { x: el.x + actualWidth / 2, y: el.y + boxHeight / 2 }
 
     if (el.rotation) {
       ctx.save()
@@ -412,26 +374,23 @@ export default class Renderer {
       ctx.translate(-center.x, -center.y)
     }
 
-    // --- 第三步：绘制背景和边框（使用动态宽度）---
+    // --- 第三步：渲染背景和边框 ---
     if (el.backgroundColor && el.backgroundColor !== '#00000000') {
       ctx.fillStyle = el.backgroundColor;
       ctx.fillRect(el.x, el.y, actualWidth, boxHeight);
     }
-
 
     if (el.stroke && el.strokeWidth > 0 && el.stroke !== '#00000000') {
       const halfStroke = el.strokeWidth / 2;
       ctx.strokeStyle = el.stroke;
       ctx.lineWidth = el.strokeWidth;
       ctx.strokeRect(
-        el.x - halfStroke,
-        el.y - halfStroke,
-        actualWidth + el.strokeWidth,
-        boxHeight + el.strokeWidth
+        el.x - halfStroke, el.y - halfStroke,
+        actualWidth + el.strokeWidth, boxHeight + el.strokeWidth
       );
     }
 
-    // --- 第四步：绘制文本（编辑中不画）---
+    // --- 第四步：执行实际绘制逻辑（编辑状态下交由 DOM 编辑器，此处不画） ---
     if (editingId.value === el.id) return;
 
     let currentY = el.y + padding;
@@ -444,6 +403,7 @@ export default class Renderer {
         return;
       }
 
+      // 设置当前片段的字体样式
       let fontStyle = '';
       if (seg.bold) fontStyle += 'bold ';
       if (seg.italic) fontStyle += 'italic ';
@@ -454,37 +414,34 @@ export default class Renderer {
       const isChinese = /[\u4e00-\u9fa5]/.test(seg.text);
 
       if (isChinese) {
-        // 中文：逐字符绘制
+        // 中文逐字符渲染：确保复杂的换行逻辑能精准执行
         const chars = seg.text.split('');
         for (let char of chars) {
           const charWidth = ctx.measureText(char).width;
-
           if (currentX + charWidth > el.x + padding + maxWidth) {
             currentY += lineHeight;
             currentX = el.x + padding;
           }
-
           if (seg.backgroundColor && seg.backgroundColor !== '#00000000') {
             ctx.fillStyle = seg.backgroundColor;
             ctx.fillRect(currentX, currentY, charWidth, fontSize);
           }
-
           ctx.fillStyle = seg.color;
           ctx.fillText(char, currentX, currentY);
 
+          // 装饰线绘制（支持加粗下划线）
           if (seg.underline) {
-            ctx.lineWidth = seg.bold ? 7 : 1;  // 🌟 加粗时线条也加粗
+            ctx.lineWidth = seg.bold ? 7 : 1;
             this.drawLine(ctx, currentX, currentY + fontSize, charWidth, seg.color);
           }
           if (seg.strike) {
-            ctx.lineWidth = seg.bold ? 7  : 1;  // 🌟 加粗时线条也加粗
+            ctx.lineWidth = seg.bold ? 7 : 1;
             this.drawLine(ctx, currentX, currentY + fontSize * 0.6, charWidth, seg.color);
           }
-
           currentX += charWidth;
         }
       } else {
-        // 英文：按单词绘制
+        // 英文单词级渲染：避免单词被强制断行
         const words = seg.text.split(' ');
         for (let i = 0; i < words.length; i++) {
           const word = words[i];
@@ -495,38 +452,32 @@ export default class Renderer {
             currentY += lineHeight;
             currentX = el.x + padding;
           }
-
           if (seg.backgroundColor && seg.backgroundColor !== '#00000000') {
             ctx.fillStyle = seg.backgroundColor;
             ctx.fillRect(currentX, currentY, wordWidth, fontSize);
           }
-
-
           ctx.fillStyle = seg.color;
           ctx.fillText(word, currentX, currentY);
 
           if (seg.underline) {
-            ctx.lineWidth = seg.bold ? 7 : 1;  // 🌟 加粗时线条也加粗
-            this.drawLine(ctx, currentX, currentY + fontSize, charWidth, seg.color);
+            ctx.lineWidth = seg.bold ? 7 : 1;
+            this.drawLine(ctx, currentX, currentY + fontSize, wordWidth, seg.color);
           }
           if (seg.strike) {
-            ctx.lineWidth = seg.bold ? 7 : 1;  // 🌟 加粗时线条也加粗
-            this.drawLine(ctx, currentX, currentY + fontSize * 0.6, charWidth, seg.color);
+            ctx.lineWidth = seg.bold ? 7 : 1;
+            this.drawLine(ctx, currentX, currentY + fontSize * 0.6, wordWidth, seg.color);
           }
-
-          currentX += wordWidth;
-          if (i < words.length - 1) {
-            currentX += spaceWidth;
-          }
+          currentX += wordWidth + spaceWidth;
         }
       }
     });
-    if (el.rotation) {
-      ctx.restore()
-    }
+
+    if (el.rotation) ctx.restore()
   }
 
-  // 辅助方法：绘制线条（下划线/删除线）
+  /**
+   * 绘制线条工具：实现自定义装饰线
+   */
   static drawLine(ctx, x, y, width, color) {
     ctx.beginPath();
     ctx.strokeStyle = color;
@@ -535,15 +486,15 @@ export default class Renderer {
     ctx.stroke();
   }
 
+  /**
+   * 绘制图像元素
+   * 核心逻辑：图片异步预加载、CSS Filter 滤镜模拟、九宫格布局
+   */
   static drawImageElement(ctx, el) {
     if (!el.url) return
 
-    const center = {
-      x: el.x + el.width / 2,
-      y: el.y + el.height / 2
-    }
+    const center = { x: el.x + el.width / 2, y: el.y + el.height / 2 }
 
-    // 应用旋转
     if (el.rotation) {
       ctx.save()
       ctx.translate(center.x, center.y)
@@ -551,10 +502,11 @@ export default class Renderer {
       ctx.translate(-center.x, -center.y)
     }
 
+    // 从 Map 中获取已加载的 HTMLImageElement，若无则初始化
     let img = this.imageCache.get(el.url)
     if (!img) {
       img = new Image()
-      img.crossOrigin = 'anonymous'
+      img.crossOrigin = 'anonymous' // 允许跨域图片导出（需要后端支持）
       img.src = el.url
       this.imageCache.set(el.url, img)
     }
@@ -564,6 +516,7 @@ export default class Renderer {
       ctx.fillRect(el.x, el.y, el.width, el.height)
     }
 
+    // 若图片已完成下载，则应用滤镜并绘制
     if (img.complete) {
       let filter = 'none'
       if (el.filters) {
@@ -575,8 +528,9 @@ export default class Renderer {
       }
       ctx.filter = filter
       ctx.drawImage(img, el.x, el.y, el.width, el.height)
-      ctx.filter = 'none'
+      ctx.filter = 'none' // 绘制后必须立即重置滤镜，防止污染后续渲染
     } else {
+      // 预加载期间展示浅灰色占位符
       ctx.fillStyle = '#f0f0f0'
       ctx.fillRect(el.x, el.y, el.width, el.height)
     }
@@ -586,124 +540,11 @@ export default class Renderer {
       ctx.strokeStyle = el.stroke
       ctx.lineWidth = el.strokeWidth
       ctx.strokeRect(
-        el.x - halfStroke,
-        el.y - halfStroke,
-        el.width + el.strokeWidth,
-        el.height + el.strokeWidth
+        el.x - halfStroke, el.y - halfStroke,
+        el.width + el.strokeWidth, el.height + el.strokeWidth
       )
     }
 
-    if (el.rotation) {
-      ctx.restore()
-    }
+    if (el.rotation) ctx.restore()
   }
-}
-
-function parseRichText(html, defaultColor, defaultSize, defaultWeight, defaultFamily) {
-  const segments = [];
-
-  // 创建一个临时 DOM 元素来解析 HTML
-  const div = document.createElement('div');
-  div.innerHTML = html;
-
-  // 递归遍历 DOM 节点
-  function processNode(node, parentStyles = {}) {
-    if (node.nodeType === Node.TEXT_NODE) {
-      const text = node.textContent;
-      if (text) {
-        segments.push({
-          text: text,
-          ...parentStyles
-        });
-      }
-    } else if (node.nodeType === Node.ELEMENT_NODE) {
-      const tagName = node.tagName.toLowerCase();
-      const styles = { ...parentStyles };
-
-      // 计算当前节点的样式
-      const computedStyle = {};
-
-      // 检查 style 属性
-      const styleAttr = node.getAttribute('style');
-      if (styleAttr) {
-        const colorMatch = styleAttr.match(/color:\s*([^;]+)/);
-        if (colorMatch) computedStyle.color = colorMatch[1];
-
-        const bgMatch = styleAttr.match(/background-color:\s*([^;]+)/);
-        if (bgMatch) computedStyle.backgroundColor = bgMatch[1];
-      }
-
-      // 处理标签
-      if (tagName === 'strong' || tagName === 'b') {
-        styles.bold = true;
-      }
-      if (tagName === 'em' || tagName === 'i') {
-        styles.italic = true;
-      }
-      if (tagName === 'u') {
-        styles.underline = true;
-      }
-      if (tagName === 's' || tagName === 'del' || tagName === 'strike') {
-        styles.strike = true;
-      }
-      if (tagName === 'mark') {
-        styles.backgroundColor = computedStyle.backgroundColor || '#ffff00';
-      }
-      if (tagName === 'span') {
-        // span 通常用于携带颜色样式
-        if (computedStyle.color) styles.color = computedStyle.color;
-        if (computedStyle.backgroundColor) styles.backgroundColor = computedStyle.backgroundColor;
-      }
-
-      // 确保默认值
-      styles.color = styles.color || defaultColor;
-      styles.fontSize = styles.fontSize || defaultSize;
-      styles.fontWeight = styles.fontWeight || defaultWeight;
-      styles.fontFamily = styles.fontFamily || defaultFamily;
-
-      // 递归处理子节点
-      node.childNodes.forEach(child => processNode(child, styles));
-    }
-  }
-
-  processNode(div, {
-    color: defaultColor,
-    fontSize: defaultSize,
-    fontWeight: defaultWeight,
-    fontFamily: defaultFamily,
-    bold: false,
-    italic: false,
-    underline: false,
-    strike: false,
-    backgroundColor: null
-  });
-
-  return segments;
-}
-
-function getColorFromStack(stack) {
-  for (let i = stack.length - 1; i >= 0; i--) {
-    const tag = stack[i];
-    if (tag.includes('style=')) {
-      const match = tag.match(/color:\s*([^;"]+)/);
-      if (match) return match[1];
-    }
-  }
-  return null;
-}
-
-function getBackgroundColorFromStack(stack) {
-  for (let i = stack.length - 1; i >= 0; i--) {
-    const tag = stack[i];
-    // 检查 style 里的 background-color
-    if (tag.includes('style=')) {
-      const match = tag.match(/background-color:\s*([^;"]+)/);
-      if (match) return match[1];
-    }
-    // 检查 <mark> 标签（TipTap 高亮默认用 mark）
-    if (tag.includes('mark') || tag === 'mark') {
-      return '#ffff00'; // 默认黄色高亮
-    }
-  }
-  return null;
 }

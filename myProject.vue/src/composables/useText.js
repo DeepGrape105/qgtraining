@@ -39,7 +39,7 @@ export function useText() {
     if (!editingId.value) return
     const el = store.elements.find(e => e.id === editingId.value)
 
-    // 🌟 从编辑器获取最新内容
+    //从编辑器获取最新内容
     if (editor.value) {
       el.richText = editor.value.getHTML()
       el.text = editor.value.state.doc.textBetween(0, editor.value.state.doc.content.size, '\n')
@@ -48,7 +48,7 @@ export function useText() {
     editingId.value = null
     editingText.value = ''
 
-    // 🌟 强制画布重绘，让高度重新计算
+    // 强制画布重绘，让高度重新计算
     store.elements = [...store.elements]
   }
 

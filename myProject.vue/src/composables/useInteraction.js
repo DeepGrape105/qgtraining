@@ -1,3 +1,15 @@
+/**
+   * 坐标转换（getScreenCoords, getWorldCoords）
+   * 手柄检测（getResizeHandle, getRotateHandle）
+   * 光标更新（updateCursor）
+   * 键盘事件（handleKeyDown, handleKeyUp）
+   * 鼠标事件（handleMouseDown, handleMouseMove, handleMouseUp）
+   * 单选缩放（handleCircleResize, handleTriangleResize, handleRectResize）
+   * 多选缩放（handleMultiResize）
+   * 滚轮事件（handleWheel）
+   * 生命周期（onMounted, onUnmounted）
+   */
+
 import { useCanvasStore } from '../store/canvasStore'
 import { isPointInElement } from '../utils/math'
 import { useElements } from './useElements'
@@ -6,29 +18,40 @@ import { useHistory } from './useHistory'
 import { useText } from './useText'
 import { onMounted, onUnmounted } from 'vue'
 import { getMultiSelectionCenter, getDistance, getScaleFactor, getElementCenter } from '../utils/math'
+import { getElementBounds, rotatePoint } from '../utils/Geometry'
 
 let globalLastClickTime = 0
 let globalLastSelectedId = null
 
-// 🌟 获取有效选中元素（如果选中了组合内的元素，自动包含同组合的其他元素）
+/**
+ * 核心逻辑：获取有效选中元素列表 (Effective Selection)
+ * * 作用：处理组合 (Group) 的联动关系。
+ * 当用户点击或框选了某个属于“组合”的子元素时，该逻辑会自动将该组合内的所有兄弟元素
+ * 全部加入选中状态，从而实现“点一选全”的交互体验。
+ * * @param {Array} elements - 画布上所有的元素数组
+ * @param {Array} selectedIds - 当前直接选中的原始 ID 数组（来自点击或框选）
+ * @returns {Array} 包含组合关联后的完整 ID 数组
+ */
 const getEffectiveSelectedIds = (elements, selectedIds) => {
   const ids = new Set(selectedIds)
 
+  //遍历每一个被直接选中的 ID
   selectedIds.forEach(id => {
+    // 查找对应的实体
     const el = elements.find(e => e.id === id)
+
+    //【关键判定】检查该元素是否被打过组 (groupId)
     if (el && el.groupId) {
-      // 🌟 有 groupId：把同组合的所有元素都加进来
       elements.forEach(other => {
         if (other.groupId === el.groupId) {
           ids.add(other.id)
         }
       })
     }
-    // 🌟 没有 groupId：什么都不做，只操作它自己
   })
-
   return [...ids]
 }
+
 export function useInteraction() {
   const store = useCanvasStore()
   const { updateElement, setSelection, clearSelection, toggleSelection } = useElements()
@@ -36,32 +59,50 @@ export function useInteraction() {
   const { record } = useHistory()
   const { startEditing, editingId } = useText()
 
-  // 交互状态
-  let isDragging = false
-  let isPanning = false
-  let lastMousePos = { x: 0, y: 0 }
-  let isMarqueeSelecting = false
-  let marqueeStart = null
-  let marqueeEnd = null
-  let isSpacePressed = false
+  /**
+   * 交互状态标志
+   * 用于跟踪当前用户操作的类型和阶段
+   */
+  let isDragging = false           // 元素拖拽移动中
+  let isPanning = false            // 画布平移中（空格键 + 拖拽）
+  let lastMousePos = { x: 0, y: 0 } // 上一帧鼠标位置，用于计算增量
+  let isMarqueeSelecting = false   // 框选中
+  let marqueeStart = null          // 框选起点（世界坐标）
+  let marqueeEnd = null            // 框选终点（世界坐标）
+  let isSpacePressed = false       // 空格键是否按下
 
-  // 缩放状态
-  let isResizing = false
-  let resizeHandle = null
-  let resizeStartPos = { x: 0, y: 0 }
-  let resizeStartSize = { width: 0, height: 0, x: 0, y: 0, points: null, radius: null }
+  /**
+   * 缩放状态
+   * 用于跟踪元素缩放操作的状态
+   */
+  let isResizing = false           // 缩放进行中
+  let resizeHandle = null          // 当前拖拽的手柄，值为 'tl', 'tr', 'bl', 'br' 之一
+  let resizeStartPos = { x: 0, y: 0 }  // 缩放开始时的鼠标位置（世界坐标）
+  let resizeStartSize = {          // 缩放开始时的元素尺寸和位置
+    width: 0,
+    height: 0,
+    x: 0,
+    y: 0,
+    points: null,                  // 三角形专用：三个顶点坐标
+    radius: null                   // 圆形专用：半径
+  }
 
-  //旋转状态
-  let isRotating = false
-  let rotateStartAngle = 0
-  let rotateStartRotation = 0
-  let rotateStartRotations = []
+  /**
+   * 旋转状态
+   * 用于跟踪元素旋转操作的状态
+   */
+  let isRotating = false           // 旋转进行中
+  let rotateStartAngle = 0         // 旋转开始时的鼠标角度（弧度）
+  let rotateStartRotation = 0      // 单选时：旋转开始时的元素角度
+  let rotateStartRotations = []    // 多选时：旋转开始时各元素的初始角度，结构为 [{ id, rotation }]
 
+  //将鼠标事件坐标转换为相对于画布元素的屏幕坐标
   const getScreenCoords = (e, canvasEl) => {
     const rect = canvasEl.getBoundingClientRect()
     return { x: e.clientX - rect.left, y: e.clientY - rect.top }
   }
 
+  //将鼠标事件坐标转换为世界坐标
   const getWorldCoords = (e, canvasEl) => {
     const screen = getScreenCoords(e, canvasEl)
     const { offsetX, offsetY, scale } = getViewport()
@@ -71,38 +112,26 @@ export function useInteraction() {
     }
   }
 
+  /**
+ * 检测鼠标是否悬停在元素的缩放手柄上
+ * 支持矩形、圆形、三角形，并正确处理元素旋转
+ * @param {{x: number, y: number}} screenPos - 鼠标的屏幕坐标
+ * @param {Object} el - 目标元素
+ * @param {number} scale - 当前视口缩放比例
+ * @param {number} offsetX - 视口 X 偏移
+ * @param {number} offsetY - 视口 Y 偏移
+ * @returns {string|null} 手柄标识：'tl'（左上）、'tr'（右上）、'bl'（左下）、'br'（右下），未命中返回 null
+ */
   const getResizeHandle = (screenPos, el, scale, offsetX, offsetY) => {
     const handleSize = 15
     const padding = 8 / scale
 
-    let minX, minY, w, h, centerX, centerY
+    const bounds = getElementBounds(el)
+    const { minX, minY, width: w, height: h, centerX, centerY } = bounds
+    const center = { x: centerX, y: centerY }
 
-    if (el.type === 'circle') {
-      centerX = el.x
-      centerY = el.y
-      minX = el.x - el.radius
-      minY = el.y - el.radius
-      w = el.radius * 2
-      h = el.radius * 2
-    } else if (el.type === 'triangle') {
-      const xs = el.points.map(p => p.x)
-      const ys = el.points.map(p => p.y)
-      minX = Math.min(...xs)
-      minY = Math.min(...ys)
-      w = Math.max(...xs) - minX
-      h = Math.max(...ys) - minY
-      centerX = minX + w / 2
-      centerY = minY + h / 2
-    } else {
-      minX = el.x
-      minY = el.y
-      w = el.width || 0
-      h = el.height || 0
-      centerX = minX + w / 2
-      centerY = minY + h / 2
-    }
 
-    // 🌟 四角相对于中心的偏移（世界坐标）
+    // 四角相对于中心的偏移（世界坐标）
     const cornerOffsets = [
       { x: -w / 2 - padding, y: -h / 2 - padding },  // 左上
       { x: w / 2 + padding, y: -h / 2 - padding },  // 右上
@@ -110,25 +139,17 @@ export function useInteraction() {
       { x: w / 2 + padding, y: h / 2 + padding }   // 右下
     ]
 
+    // 计算旋转后的手柄屏幕坐标
     const corners = cornerOffsets.map(offset => {
-      let x = offset.x
-      let y = offset.y
-
-      // 🌟 如果有旋转，计算旋转后的偏移
-      if (el.rotation) {
-        const rad = (el.rotation * Math.PI) / 180
-        const cos = Math.cos(rad)
-        const sin = Math.sin(rad)
-        x = offset.x * cos - offset.y * sin
-        y = offset.x * sin + offset.y * cos
-      }
-
+      const point = { x: center.x + offset.x, y: center.y + offset.y }
+      const rotated = el.rotation ? rotatePoint(point, center, el.rotation) : point
       return {
-        x: (centerX + x) * scale + offsetX,
-        y: (centerY + y) * scale + offsetY
+        x: rotated.x * scale + offsetX,
+        y: rotated.y * scale + offsetY
       }
     })
 
+    // 检测鼠标是否在某个手柄的范围内
     const keys = ['tl', 'tr', 'bl', 'br']
     for (let i = 0; i < corners.length; i++) {
       const dx = screenPos.x - corners[i].x
@@ -140,69 +161,38 @@ export function useInteraction() {
     return null
   }
 
+  /**
+ * 检测鼠标是否悬停在元素的旋转手柄上
+ * @param {{x: number, y: number}} screenPos - 鼠标的屏幕坐标
+ * @param {Object} el - 目标元素
+ * @param {number} scale - 当前视口缩放比例
+ * @param {number} offsetX - 视口 X 偏移
+ * @param {number} offsetY - 视口 Y 偏移
+ * @returns {boolean} 是否命中旋转手柄
+ */
   const getRotateHandle = (screenPos, el, scale, offsetX, offsetY) => {
-    // 计算包围盒（和 drawHighlight 一样）
-    let minX, minY, w, h
-    if (el.type === 'triangle') {
-      const xs = el.points.map(p => p.x)
-      const ys = el.points.map(p => p.y)
-      minX = Math.min(...xs)
-      minY = Math.min(...ys)
-      w = Math.max(...xs) - minX
-      h = Math.max(...ys) - minY
-    } else if (el.type === 'circle') {
-      minX = el.x - el.radius
-      minY = el.y - el.radius
-      w = el.radius * 2
-      h = el.radius * 2
-    } else if (el.type === 'text') {
-      minX = el.x
-      minY = el.y
-      w = el.width || 100
-      h = el.height || 20
-    } else {
-      minX = el.x
-      minY = el.y
-      w = el.width
-      h = el.height
-    }
-
-    const center = {
-      x: minX + w / 2,
-      y: minY + h / 2
-    }
+    const bounds = getElementBounds(el)
+    const { minX, minY, width: w, height: h, centerX, centerY } = bounds
+    const center = { x: centerX, y: centerY }
 
     const padding = 8 / scale
     const rotateHandleDistance = 28 / scale
-    const handleY = minY - padding - rotateHandleDistance
-    const handleX = center.x
 
-    // 如果有旋转，计算旋转后的位置
-    let worldX = handleX
-    let worldY = handleY
-    if (el.rotation) {
-      const rad = (el.rotation * Math.PI) / 180
-      const cos = Math.cos(rad)
-      const sin = Math.sin(rad)
-      const dx = handleX - center.x
-      const dy = handleY - center.y
-      worldX = center.x + dx * cos - dy * sin
-      worldY = center.y + dx * sin + dy * cos
-    }
+    // 旋转手柄位于元素顶部中点上方
+    const handlePoint = { x: center.x, y: minY - padding - rotateHandleDistance }
+    const rotated = el.rotation ? rotatePoint(handlePoint, center, el.rotation) : handlePoint
 
     const screenHandle = {
-      x: worldX * scale + offsetX,
-      y: worldY * scale + offsetY
+      x: rotated.x * scale + offsetX,
+      y: rotated.y * scale + offsetY
     }
 
     const dx = screenPos.x - screenHandle.x
     const dy = screenPos.y - screenHandle.y
-    if (Math.sqrt(dx * dx + dy * dy) < 20) {
-      return true
-    }
-    return false
+    return Math.sqrt(dx * dx + dy * dy) < 20
   }
 
+  //根据当前交互状态更新画布光标样式
   const updateCursor = (canvasEl, screenPos, scale, offsetX, offsetY) => {
     if (!canvasEl) return
 
@@ -240,19 +230,27 @@ export function useInteraction() {
     canvasEl.style.cursor = 'default'
   }
 
+  
+   //键盘按下事件处理，空格键按下时启用画布平移模式
   const handleKeyDown = (e) => {
     if (e.code === 'Space' && !editingId.value) {
       isSpacePressed = true
       e.preventDefault()
     }
   }
-
+  //键盘抬起事件处理，空格键抬起时禁用画布平移模式
   const handleKeyUp = (e) => {
     if (e.code === 'Space') {
       isSpacePressed = false
     }
   }
 
+  /**
+ * 鼠标按下事件处理
+ * 处理手柄检测、元素选中、拖拽开始、框选开始
+ * @param {MouseEvent} e - 鼠标事件
+ * @param {HTMLCanvasElement} canvasEl - 画布元素
+ */
   const handleMouseDown = (e, canvasEl) => {
     if (editingId.value) return
 
@@ -261,8 +259,10 @@ export function useInteraction() {
     const now = Date.now()
     const { scale, offsetX, offsetY } = getViewport()
 
-    // ========== 手柄检测（单选和多选） ==========
-    // ========== 手柄检测（单选和多选） ==========
+    /*
+  * 第一阶段：手柄检测
+  * 优先检测旋转手柄和缩放手柄，命中后直接返回
+  */
     if (store.selectedIds.length >= 1) {
       const selectedElements = store.elements.filter(el => store.selectedIds.includes(el.id))
 
@@ -290,7 +290,7 @@ export function useInteraction() {
       })
 
       const center = { x: minX + (maxX - minX) / 2, y: minY + (maxY - minY) / 2 }
-      const padding = 8 / scale   // 和绘制保持一致
+      const padding = 8 / scale  
       const w = maxX - minX
       const h = maxY - minY
 
@@ -388,10 +388,12 @@ export function useInteraction() {
       }
     }
     
-    // ========== 点击元素检测 ==========
+    /*
+   * 第二阶段：元素点击检测
+   * 优先检查点击是否在已选中元素的包围盒内（用于拖拽移动）
+   */
     let clickedEl = null
 
-    // 🌟 优先检查：点击位置是否在已选中元素的包围盒内（包括 padding 区域）
     if (store.selectedIds.length > 0) {
       const selectedElements = store.elements.filter(el => store.selectedIds.includes(el.id))
 
@@ -418,7 +420,6 @@ export function useInteraction() {
         }
       })
 
-      // 加上选中框的 padding（和绘制保持一致）
       const boxPadding = 8 / scale
       const expandedMinX = minX - boxPadding
       const expandedMinY = minY - boxPadding
@@ -504,6 +505,10 @@ export function useInteraction() {
     if (canvasEl) canvasEl.style.cursor = 'default'
   }
 
+  /**
+ * 鼠标移动事件处理
+ * 根据当前交互状态执行相应操作：缩放、旋转、框选、拖拽、平移
+ */
   const handleMouseMove = (e, canvasEl) => {
     if (!canvasEl) return
     const screenPos = getScreenCoords(e, canvasEl)
@@ -511,6 +516,7 @@ export function useInteraction() {
 
     updateCursor(canvasEl, screenPos, scale, offsetX, offsetY)
 
+    // 框选
     if (isResizing) {
       const worldPos = getWorldCoords(e, canvasEl)
       const dx = worldPos.x - resizeStartPos.x
@@ -535,6 +541,7 @@ export function useInteraction() {
       return
     }
 
+    // 旋转
     if (isRotating) {
       const effectiveIds = getEffectiveSelectedIds(store.elements, store.selectedIds)  // 🌟
       const selectedElements = effectiveIds.map(id => store.elements.find(e => e.id === id)).filter(Boolean)
@@ -553,7 +560,6 @@ export function useInteraction() {
         const startRotation = rotateStartRotations[0]?.rotation || 0
         selectedEl.rotation = Math.round((startRotation + deltaAngle) % 360)
       } else {
-        // 🌟 多选旋转：每个元素绕自己的中心旋转相同的角度
         // 计算整体包围盒中心作为参考
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
         selectedElements.forEach(el => {
@@ -595,7 +601,7 @@ export function useInteraction() {
       return
     }
 
-    // 框选
+    // 框选进行中，更新框选矩形，并动态计算框内的元素
     if (isMarqueeSelecting) {
       const worldPos = getWorldCoords(e, canvasEl)
       marqueeEnd = worldPos
@@ -611,7 +617,7 @@ export function useInteraction() {
         // 找出框内的元素
         const selected = store.elements.filter(el => isElementInRect(el, rect))
 
-        // 🌟 自动包含同组合的其他元素
+        // 自动包含同组合的其他元素
         const ids = new Set()
         selected.forEach(el => {
           ids.add(el.id)
@@ -635,6 +641,7 @@ export function useInteraction() {
     const dx = screenPos.x - lastMousePos.x
     const dy = screenPos.y - lastMousePos.y
 
+    // 拖拽
     if (isDragging) {
       const effectiveIds = getEffectiveSelectedIds(store.elements, store.selectedIds)
       const worldDx = dx / scale
@@ -660,6 +667,10 @@ export function useInteraction() {
     lastMousePos = { x: screenPos.x, y: screenPos.y }
   }
 
+  /**
+ * 鼠标释放事件处理
+ * 结束当前交互状态，保存历史记录，重置光标
+ */
   const handleMouseUp = (e, canvasEl) => {
     if (isResizing) {
       const selectedElements = store.elements.filter(el => store.selectedIds.includes(el.id))
@@ -698,7 +709,7 @@ export function useInteraction() {
     }
 
     if (isDragging) {
-      // 🌟 核心修复：拖拽结束时也要获取包含组合在内的有效 ID
+      //拖拽结束时也要获取包含组合在内的有效 ID
       const effectiveIds = getEffectiveSelectedIds(store.elements, store.selectedIds)
       effectiveIds.forEach(id => {
         const el = store.elements.find(e => e.id === id)
@@ -731,8 +742,14 @@ export function useInteraction() {
     isPanning = false
     if (canvasEl) canvasEl.style.cursor = 'default'
   }
-  // ========== 单选缩放函数 ==========
 
+  /**
+ * 圆形缩放处理
+ * 根据鼠标当前位置与圆心的距离，等比例缩放半径
+ * @param {Object} element - 目标圆形元素
+ * @param {{x: number, y: number}} worldPos - 当前鼠标的世界坐标
+ * @param {Object} resizeStartSize - 缩放开始时的初始状态，包含 radius 字段
+ */
   const handleCircleResize = (element, worldPos, resizeStartSize) => {
     const startDist = resizeStartSize.radius || element.radius
     const currentDist = getDistance(worldPos, { x: element.x, y: element.y })
@@ -740,10 +757,23 @@ export function useInteraction() {
     updateElement(element.id, { radius:startDist * scaleFactor })
   }
 
+  /**
+   * 三角形缩放处理
+   * 支持两种模式：
+   * - 拖拽右下角手柄（'br'）：以三角形中心为基准等比例缩放
+   * - 拖拽其他顶点手柄：直接移动对应顶点的位置
+   * @param {Object} element - 目标三角形元素
+   * @param {{x: number, y: number}} worldPos - 当前鼠标的世界坐标
+   * @param {number} dx - 鼠标在 X 方向的移动增量
+   * @param {number} dy - 鼠标在 Y 方向的移动增量
+   * @param {string} resizeHandle - 当前拖拽的手柄标识（'tl', 'tr', 'bl', 'br'）
+   * @param {Object} resizeStartSize - 缩放开始时的初始状态，包含 points 字段
+   */
   const handleTriangleResize = (element, worldPos, dx, dy, resizeHandle, resizeStartSize) => {
     const points = resizeStartSize.points || element.points
 
     if (resizeHandle === 'br') {
+      // 等比例缩放：以三角形中心为基准点
       const cx = (points[0].x + points[1].x + points[2].x) / 3
       const cy = (points[0].y + points[1].y + points[2].y) / 3
       const startDist = getDistance(points[0], { x: cx, y: cy })
@@ -757,6 +787,7 @@ export function useInteraction() {
         }))
       })
     } else {
+      // 单顶点拖拽：直接修改对应顶点的坐标
       const newPoints = [...points]
       const index = { tl: 0, tr: 1, bl: 2 }[resizeHandle]
       if (index !== undefined) {
@@ -766,6 +797,20 @@ export function useInteraction() {
     }
   }
 
+  /**
+ * 矩形缩放处理
+ * 根据拖拽的手柄位置，更新矩形的宽度、高度以及左上角坐标
+ * 手柄标识规则：
+ * - 'l' 表示左侧手柄，修改宽度和 X 坐标
+ * - 'r' 表示右侧手柄，仅修改宽度
+ * - 't' 表示顶部手柄，修改高度和 Y 坐标
+ * - 'b' 表示底部手柄，仅修改高度
+ * @param {Object} element - 目标矩形元素
+ * @param {number} dx - 鼠标在 X 方向的移动增量
+ * @param {number} dy - 鼠标在 Y 方向的移动增量
+ * @param {string} resizeHandle - 当前拖拽的手柄标识
+ * @param {Object} resizeStartSize - 缩放开始时的初始尺寸和位置
+ */
   const handleRectResize = (element, dx, dy, resizeHandle, resizeStartSize) => {
     let newWidth = resizeStartSize.width
     let newHeight = resizeStartSize.height
@@ -790,22 +835,31 @@ export function useInteraction() {
       y: newY
     })
   }
-
+  
+  /**
+   * 多元素缩放处理
+   * 根据鼠标当前位置与多选中心的距离，等比例缩放选中元素
+   * @param {{x: number, y: number}} worldPos - 当前鼠标的世界坐标
+   * @param {Array} selectedElements - 选中的元素数组
+   * @param {{x: number, y: number}} resizeStartPos - 缩放开始时的鼠标位置
+   * @param {Object} resizeStartSize - 缩放开始时的初始尺寸和位置
+   */
   const handleMultiResize = (worldPos, selectedElements, resizeStartPos, resizeStartSize) => {
     const { cx, cy } = getMultiSelectionCenter(selectedElements)
 
-    const startDist = getDistance(resizeStartPos, { x: cx, y: cy })
-    const currentDist = getDistance(worldPos, { x: cx, y: cy })
-    const scaleFactor = currentDist / startDist
+    const startDist = getDistance(resizeStartPos, { x: cx, y: cy })// 与多选中心的距离
+    const currentDist = getDistance(worldPos, { x: cx, y: cy })// 与当前鼠标的距离
+    const scaleFactor = currentDist / startDist// 缩放比
 
     const startElements = resizeStartSize.elements
     selectedElements.forEach(el => {
       const startEl = startElements.find(e => e.id === el.id)
       if (!startEl) return
 
+      // 根据元素类型进行不同处理
       if (el.type === 'circle') {
         updateElement(el.id, {
-          radius: startEl.radius * scaleFactor,  // 🌟 修正：用 startEl.radius
+          radius: startEl.radius * scaleFactor,  
           x: cx + (startEl.x - cx) * scaleFactor,
           y: cy + (startEl.y - cy) * scaleFactor
         })
@@ -841,7 +895,7 @@ export function useInteraction() {
     })
   }
 
-  // 滚轮
+  // 鼠标滚轮
   const handleWheel = (e, canvasEl) => {
     e.preventDefault()
     if (e.ctrlKey || e.metaKey) {

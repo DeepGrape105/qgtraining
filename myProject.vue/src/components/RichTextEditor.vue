@@ -29,7 +29,11 @@
 </template>
 
 <script setup>
-import { computed, watch, nextTick, ref, onBeforeUnmount } from 'vue'
+/**
+ * TextEditor 组件
+ * 功能：提供图形上方的富文本实时编辑层，支持样式切换、自动定位及历史记录回退。
+ */
+import { computed, watch, nextTick, onBeforeUnmount } from 'vue'
 import { useEditor, EditorContent, BubbleMenu } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
 import { Extension } from '@tiptap/core'
@@ -42,15 +46,20 @@ const store = useCanvasStore()
 const { editingId, editingText, saveText, cancelEditing } = useText()
 const { record } = useHistory()
 
+// 状态锁：防止在编辑器初始化过程中误触发 finish 导致保存错误
 let isReady = false
 
-// 自定义回车键拦截：保留你 Enter 保存，Shift+Enter 换行的习惯
+/**
+ * 自定义 Tiptap 扩展：键盘快捷键
+ * Enter: 结束编辑并保存
+ * Escape: 取消编辑并回滚
+ */
 const EnterShortcut = Extension.create({
   addKeyboardShortcuts() {
     return {
       'Enter': () => {
         finish()
-        return true // 拦截默认回车行为
+        return true
       },
       'Escape': () => {
         cancel()
@@ -60,31 +69,37 @@ const EnterShortcut = Extension.create({
   }
 })
 
-// 初始化 TipTap 编辑器
+/**
+ * 初始化 Tiptap 编辑器实例
+ */
 const editor = useEditor({
   content: '',
   extensions: [
-    StarterKit,
-    EnterShortcut // 挂载自定义快捷键
-    ,Underline
+    StarterKit,      // 基础套件（包含段落、列表、粗体等）
+    EnterShortcut,   // 自定义快捷键
+    Underline        // 下划线插件
   ],
+  // 实时更新：当编辑器内容改变时，将数据同步回 Store 中的元素对象
   onUpdate: ({ editor }) => {
     if (editingId.value) {
       const el = store.elements.find(e => e.id === editingId.value)
       if (el) {
-        // 【关键设计】：分别保存纯文本和富文本
-        // 1. 提取纯文本给 el.text，让你的 Renderer 继续完美测算高度！
+        // 1. 提取纯文本用于画布渲染引擎绘制（非编辑状态下使用）
         const plainText = editor.state.doc.textBetween(0, editor.state.doc.content.size, '\n')
         el.text = plainText
         
-        // 2. 提取 HTML 给 el.richText，保留加粗斜体等格式
+        // 2. 存储 HTML 富文本字符串，用于下次进入编辑状态时恢复样式
         el.richText = editor.getHTML() 
-        editingText.value = el.text // 同步原逻辑
+        editingText.value = el.text 
       }
     }
   }
 })
 
+/**
+ * 监听编辑对象变化
+ * 当 editingId 改变时，更新编辑器内容并自动聚焦
+ */
 watch(editingId, async (id) => {
   if (id) {
     isReady = false
@@ -92,24 +107,30 @@ watch(editingId, async (id) => {
     
     const el = store.elements.find(e => e.id === id)
     if (editor.value && el) {
-      // 优先加载富文本，没有的话加载纯文本
+      // 优先级：富文本数据 > 纯文本数据 > 空字符串
       editor.value.commands.setContent(el.richText || el.text || '')
       
+      // 延迟处理：确保 DOM 渲染后聚焦并设置光标在末尾
       setTimeout(() => {
-        // 自动聚焦并把光标移到最后
         editor.value.commands.focus('end')
+        // 标记准备就绪，此时点击外部可以触发保存
         setTimeout(() => { isReady = true }, 100)
       }, 50)
     }
   }
 })
 
-// 样式与原生逻辑完全一致，保证文本框行为不被破坏
+/**
+ * 核心坐标计算逻辑
+ * 将画布坐标系（Canvas Space）中的图形坐标转换为网页 DOM 坐标系（Screen Space）
+ * 计算公式：屏幕位置 = (元素坐标 * 缩放比例) + 视口偏移量
+ */
 const editorStyle = computed(() => {
   const el = store.elements.find(e => e.id === editingId.value)
   if (!el) return { display: 'none' }
 
   const { offsetX, offsetY, scale } = store.viewport
+  // 字体大小和盒子尺寸也需要根据缩放比例进行同步
   const fontSize = (el.fontSize || 20) * scale
   const boxWidth = (el.width || 200) * scale
   const boxHeight = (el.height || 40) * scale
@@ -124,63 +145,46 @@ const editorStyle = computed(() => {
     color: el.fill || '#000000',
     fontWeight: el.fontWeight || 'normal',
     fontFamily: 'Arial, sans-serif',
-    zIndex: 9999, // 保证在画布最上层
+    zIndex: 9999,
     pointerEvents: 'auto'
   }
 })
 
+/**
+ * 完成编辑
+ * 1. 检查是否有空内容并进行默认值填充
+ * 2. 触发历史记录（用于撤销）
+ * 3. 释放编辑锁，关闭编辑器
+ */
 const finish = () => {
   if (!isReady) return
   
   const el = store.elements.find(e => e.id === editingId.value)
   if (el) {
-    // 没字时的默认提示
     const plainText = editor.value.getText()
+    // 防止用户删空内容导致图形在画布上无法点击，设置默认提示语
     if (!plainText || plainText.trim() === '') {
       el.text = '双击编辑'
       el.richText = '<p>双击编辑</p>'
     }
   }
-  record()
-  saveText()
+  record()   // 记录快照，以便后续可以 Undo
+  saveText() // 重置 editingId，关闭组件
 }
 
+/**
+ * 取消编辑：不保存任何更改并重置状态
+ */
 const cancel = () => {
   cancelEditing()
 }
 
+/**
+ * 内存清理：组件卸载前彻底销毁编辑器实例，防止内存泄漏
+ */
 onBeforeUnmount(() => {
   if (editor.value) {
     editor.value.destroy()
-  }
-})
-
-// 自定义全选快捷键，阻止事件冒泡
-const SelectAll = Extension.create({
-  name: 'selectAll',
-  addKeyboardShortcuts() {
-    return {
-      'Mod-a': ({ editor }) => {
-        editor.commands.selectAll()
-        return true  // 返回 true 表示已处理，不会继续传播
-      }
-    }
-  },
-  addProseMirrorPlugins() {
-    return [
-      new Plugin({
-        props: {
-          handleKeyDown(view, event) {
-            // 如果是 Ctrl+A 或 Cmd+A，阻止事件冒泡到画布
-            if ((event.ctrlKey || event.metaKey) && event.key === 'a') {
-              event.stopPropagation()
-              // 不阻止默认行为，让编辑器自己处理全选
-            }
-            return false
-          }
-        }
-      })
-    ]
   }
 })
 </script>

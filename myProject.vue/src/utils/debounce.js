@@ -1,4 +1,4 @@
-// src/utils/debounce.js
+//防抖函数，适用于输入框等频繁触发的事件，减少不必要的处理
 export function debounce(fn, delay) {
   let timer = null
   const debounced = (...args) => {

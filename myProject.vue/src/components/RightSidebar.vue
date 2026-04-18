@@ -4,7 +4,6 @@
     
     <div v-if="selectedEl" class="panel-body">
       
-      <!-- ========== 三角形专属 ========== -->
       <template v-if="selectedEl.type === 'triangle'">
         <div class="prop-group">
           <div class="group-title">位置</div>
@@ -19,22 +18,21 @@
             </div>
           </div>
           <div class="prop-row">
-        <div class="input-item">
-          <label>旋转</label>
-          <input 
-            type="number" 
-            v-model.number="selectedEl.rotation" 
-            @input="onValueChange"
-            min="-360"
-            max="360"
-            step="1"
-          />
-        </div>
-      </div>
+            <div class="input-item">
+              <label>旋转</label>
+              <input 
+                type="number" 
+                v-model.number="selectedEl.rotation" 
+                @input="onValueChange"
+                min="-360"
+                max="360"
+                step="1"
+              />
+            </div>
+          </div>
         </div>
       </template>
 
-      <!-- ========== 非三角形：位置与大小 ========== -->
       <div class="prop-group" v-if="selectedEl.type !== 'triangle'">
         <div class="group-title">位置与大小</div>
         <div class="prop-row">
@@ -47,6 +45,7 @@
             <input type="number" v-model.number="selectedEl.y" @change="onValueChange" />
           </div>
         </div>
+        
         <div class="prop-row" v-if="selectedEl.type !== 'circle' && selectedEl.type !== 'text' && selectedEl.type !== 'image'">
           <div class="input-item">
             <label>宽</label>
@@ -57,19 +56,21 @@
             <input type="number" v-model.number="selectedEl.height" @change="onValueChange" />
           </div>
         </div>
+        
         <div class="prop-row">
-        <div class="input-item">
-          <label>旋转</label>
-          <input 
-            type="number" 
-            v-model.number="selectedEl.rotation" 
-            @input="onValueChange"
-            min="-360"
-            max="360"
-            step="1"
-          />
+          <div class="input-item">
+            <label>旋转</label>
+            <input 
+              type="number" 
+              v-model.number="selectedEl.rotation" 
+              @input="onValueChange"
+              min="-360"
+              max="360"
+              step="1"
+            />
+          </div>
         </div>
-      </div>
+
         <div class="prop-row" v-if="selectedEl.type === 'image'">
           <div class="input-item">
             <label>宽</label>
@@ -80,6 +81,7 @@
             <input type="number" v-model.number="selectedEl.height" @change="onValueChange" />
           </div>
         </div>
+
         <div class="prop-row" v-if="selectedEl.type === 'circle'">
           <div class="input-item">
             <label>半径</label>
@@ -88,11 +90,9 @@
         </div>
       </div>
 
-      <!-- 文字属性 -->
       <div class="prop-group" v-if="selectedEl.type === 'text'">
         <div class="group-title">文字属性</div>
         
-        <!-- 富文本样式 -->
         <div class="prop-row" style="flex-wrap: wrap;">
           <button @mousedown.prevent @click="applyTextStyle('bold')" :class="{ 'active': editor?.isActive('bold') }">B</button>
           <button @mousedown.prevent @click="applyTextStyle('italic')" :class="{ 'active': editor?.isActive('italic') }">I</button>
@@ -100,7 +100,6 @@
           <button @mousedown.prevent @click="applyTextStyle('strike')" :class="{ 'active': editor?.isActive('strike') }">S</button>
         </div>
         
-        <!-- 字体 -->
         <div class="prop-row">
           <div class="input-item">
             <label>字体</label>
@@ -113,7 +112,6 @@
           </div>
         </div>
         
-        <!-- 字号 -->
         <div class="prop-row">
           <div class="input-item">
             <label>字号</label>
@@ -121,7 +119,6 @@
           </div>
         </div>
         
-        <!-- 文字颜色 -->
         <div class="prop-row">
           <div class="input-item">
             <label>文字颜色</label>
@@ -129,17 +126,14 @@
           </div>
         </div>
 
-        <!-- 背景色 -->
         <div class="prop-row">
           <div class="input-item">
             <label>高亮</label>
             <input type="color" :value="editor?.getAttributes('highlight').color || '#ffffff'" @input="e => setTextBackground(e.target.value)" />
           </div>
         </div>
-
       </div>
 
-      <!-- 图片滤镜 -->
       <div class="prop-group" v-if="selectedEl.type === 'image'">
         <div class="group-title">图片滤镜</div>
         <div class="prop-row">
@@ -158,22 +152,21 @@
         </div>
       </div>
 
-      <!-- 外观样式 -->
-       
       <div class="prop-group">
         <div class="group-title">外观样式</div> 
 
-         <div class="prop-row" v-if="selectedEl.type !== 'text' && selectedEl.type !== 'image'">
+        <div class="prop-row" v-if="selectedEl.type !== 'text' && selectedEl.type !== 'image'">
           <div class="input-item">
             <label>填充颜色</label>
             <input type="color" v-model="selectedEl.fill" @input="onValueChange" />
           </div>
         </div>
 
-        <div  class="prop-row"></div v-if="selectedEl.type === 'text'">
-        <div class="input-item">
-          <label>背景颜色</label>
-          <input type="color" v-model="selectedEl.backgroundColor" @input="onValueChange" />
+        <div class="prop-row" v-if="selectedEl.type === 'text'">
+          <div class="input-item">
+             <label>背景颜色</label>
+            <input type="color" v-model="selectedEl.backgroundColor" @input="onValueChange" />
+          </div>
         </div>
 
         <div class="prop-row">
@@ -198,7 +191,6 @@
         </div>
       </div>
 
-      <!-- 快捷操作 -->
       <div class="prop-group">
         <div class="group-title">快捷操作</div>
         <div class="button-grid">
@@ -216,28 +208,42 @@
 </template>
 
 <script setup>
+/**
+ * 属性面板逻辑层
+ */
 import { computed , ref} from 'vue'
 import { useCanvasStore } from '../store/canvasStore'
 import { useElements } from '../composables/useElements'
 import { useHistory } from '../composables/useHistory'
 import { useText } from '../composables/useText'
 
+// 依赖注入与 Hook 初始化
 const store = useCanvasStore()
-const { removeSelected, updateElement } = useElements()
-const { record } = useHistory()
-const { editor, editingId, activeStyles } = useText()
+const { removeSelected, updateElement } = useElements() // 图形操作方法
+const { record } = useHistory()                         // 撤销重做快照
+const { editor, editingId, activeStyles } = useText()    // 富文本编辑器状态
 const styleUpdateKey = ref(0)
 
+/**
+ * 当前选中的单个元素（如果是多选则返回 null）
+ * @returns {Object|null}
+ */
 const selectedEl = computed(() => {
   const ids = store.selectedIds
   if (ids.length !== 1) return null
   return store.elements.find(el => el.id === ids[0])
 })
 
+/**
+ * 当任何属性发生改变时，记录历史状态快照，以便撤销
+ */
 const onValueChange = () => {
   record()
 }
 
+/**
+ * 图层置顶：计算当前所有元素的最高 ZIndex 并加一
+ */
 const bringToFront = () => {
   if (!selectedEl.value) return
   record()
@@ -245,6 +251,9 @@ const bringToFront = () => {
   selectedEl.value.zIndex = maxZ + 1
 }
 
+/**
+ * 图层置底：计算当前所有元素的最低 ZIndex 并减一
+ */
 const sendToBack = () => {
   if (!selectedEl.value) return
   record()
@@ -252,6 +261,10 @@ const sendToBack = () => {
   selectedEl.value.zIndex = minZ - 1
 }
 
+/**
+ * 三角形质心计算（仅针对 triangle 类型）
+ * 质心坐标 = (x1+x2+x3)/3, (y1+y2+y3)/3
+ */
 const triangleCenter = computed(() => {
   if (!selectedEl.value || selectedEl.value.type !== 'triangle') return { x: 0, y: 0 }
   const points = selectedEl.value.points
@@ -261,19 +274,27 @@ const triangleCenter = computed(() => {
   }
 })
 
+/**
+ * 更新三角形位置：保持形状不变的情况下整体偏移三个顶点
+ * @param {'x'|'y'} axis 轴向
+ * @param {string|number} value 目标位置值
+ */
 const updateTrianglePosition = (axis, value) => {
   if (!selectedEl.value || selectedEl.value.type !== 'triangle') return
   record()
   const delta = Number(value) - triangleCenter.value[axis]
   const points = selectedEl.value.points
   const newPoints = points.map(p => ({
-    x: p.x + delta,
-    y: p.y + delta
+    x: axis === 'x' ? p.x + delta : p.x,
+    y: axis === 'y' ? p.y + delta : p.y
   }))
   updateElement(selectedEl.value.id, { points: newPoints })
 }
 
-// 修改 RightSidebar.vue 中的 applyTextStyle 函数
+/**
+ * 应用 Tiptap 富文本样式并同步回 Store
+ * @param {string} type 样式类型（bold/italic/etc.）
+ */
 const applyTextStyle = (type) => {
   if (!editor.value || !editingId.value) return
   
@@ -284,32 +305,32 @@ const applyTextStyle = (type) => {
   else if (type === 'strike') chain.toggleStrike().run()
   
   if (selectedEl.value) {
-    // 保存富文本内容到元素
+    // 强制同步 HTML 内容，确保非编辑模式下的 Canvas 渲染更新
     selectedEl.value.richText = editor.value.getHTML()
-    // 触发画布重绘
+    // 通过重新赋值触发 Vue 的响应式依赖通知（针对数组内部对象的属性修改）
     store.elements = [...store.elements]
     onValueChange()
   }
 }
-// 设置选中文字颜色
+
+/**
+ * 设置选中文字的颜色（使用 Tiptap Color 扩展）
+ */
 const setTextColor = (color) => {
   if (!editor.value || !editingId.value) return
   editor.value.chain().focus().setColor(color).run()
 }
 
-// 设置选中文字背景色
+/**
+ * 设置选中文字的背景高亮色
+ * 自动处理十六进制颜色为半透明 rgba 格式以获得更好的视觉叠加效果
+ */
 const setTextBackground = (color) => {
   if (!editor.value || !editingId.value) return
-  // 把纯色转成半透明
   const rgba = color.startsWith('#') 
     ? `rgba(${parseInt(color.slice(1,3),16)}, ${parseInt(color.slice(3,5),16)}, ${parseInt(color.slice(5,7),16)}, 0.5)`
     : color
   editor.value.chain().focus().setHighlight({ color: rgba }).run()
-}
-
-const isStyleActive = (type) => {
-  if (!editor.value) return false  
-  return editor.value.isActive(type)
 }
 </script>
 
