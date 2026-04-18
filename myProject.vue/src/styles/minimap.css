@@ -1,13 +1,15 @@
 .minimap-container {
   position: fixed;
-  left: 20px;
-  bottom: 20px;
+  left: 16px;
+  bottom: 16px;
   z-index: 1000;
 }
+
 .minimap-canvas {
-  border-radius: 12px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  /* 稍微调小圆角 */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   cursor: default;
   background: #fff;
 }

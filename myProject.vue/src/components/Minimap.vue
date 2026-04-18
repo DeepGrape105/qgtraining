@@ -20,7 +20,7 @@ import { useMinimap } from '../composables/useMinimap'
 import { drawMinimap } from '../utils/minimapRenderer'
 
 const store = useCanvasStore()
-const minimapSize = 180
+const minimapSize = 120
 
 const minimapCanvas = ref(null)
 const isDragging = ref(false)

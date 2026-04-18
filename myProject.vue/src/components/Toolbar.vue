@@ -37,7 +37,6 @@
     </div>
   </template>
   
-  <button class="tool-btn delete-btn" @click="removeSelected">删除</button>
   </div>
  <!-- 🌟 中间区域：根据选中数量显示不同内容 -->
     <div class="tool-group">
@@ -81,14 +80,6 @@
       <button class="tool-btn export-btn" @click="exportToImage">
         <span class="icon">⬇️</span> 导出为 PNG
       </button>
-    </div>
-
-    <div class="divider"></div>
-
-    <div class="tool-group">
-      <button class="tool-btn" @click="handleZoomIn">➕</button>
-      <span class="zoom-indicator">{{ Math.round(viewport.scale * 100) }}%</span>
-      <button class="tool-btn" @click="handleZoomOut">➖</button>
     </div>
 
     <div class="divider"></div>
@@ -281,10 +272,6 @@ const handleZoomOut = () => {
   zoomOut(centerX, centerY)
 }
 
-const handleResetView = () => {
-  resetViewport()
-}
-
 onMounted(() => {
   fetchHistory();
 })
@@ -293,27 +280,6 @@ const toggleGrid = () => {
   store.canvasConfig.showGrid = !store.canvasConfig.showGrid
 }
 
-// 切换灰度
-const toggleGrayscale = () => {
-  if (!selectedEl.value || selectedEl.value.type !== 'image') return
-  record()
-  const newVal = !selectedEl.value.filters?.grayscale
-  updateSelected({ filters: { ...selectedEl.value.filters, grayscale: newVal } })
-}
-
-// 更新亮度
-const updateBrightness = (val) => {
-  if (!selectedEl.value || selectedEl.value.type !== 'image') return
-  record()
-  updateSelected({ filters: { ...selectedEl.value.filters, brightness: Number(val) } })
-}
-
-// 更新对比度
-const updateContrast = (val) => {
-  if (!selectedEl.value || selectedEl.value.type !== 'image') return
-  record()
-  updateSelected({ filters: { ...selectedEl.value.filters, contrast: Number(val) } })
-}
 </script>
 
 <style scoped src="../styles/toolbar.css"></style>
