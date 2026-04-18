@@ -13,6 +13,8 @@ export const useCanvasStore = defineStore('canvas', {
     // 元素图层树：存储所有图形实体的结构化数据
     elements: [],
 
+    // 对齐辅助线数据
+    snapLines: [],
     // 选中集：存储当前处于活跃状态的图元 ID 序列
     selectedIds: [],
 

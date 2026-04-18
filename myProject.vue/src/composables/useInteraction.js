@@ -19,9 +19,13 @@ import { useText } from './useText'
 import { onMounted, onUnmounted } from 'vue'
 import { getMultiSelectionCenter, getDistance, getScaleFactor, getElementCenter } from '../utils/math'
 import { getElementBounds, rotatePoint } from '../utils/Geometry'
+import { calculateSnap } from '../utils/snapHelper'
 
 let globalLastClickTime = 0
 let globalLastSelectedId = null
+
+let snapLines = []
+let lastSnapTime = 0
 
 /**
  * 核心逻辑：获取有效选中元素列表 (Effective Selection)
@@ -642,28 +646,89 @@ export function useInteraction() {
     const dy = screenPos.y - lastMousePos.y
 
     // 拖拽
+    // 在 handleMouseMove 的 isDragging 部分
+
     if (isDragging) {
       const effectiveIds = getEffectiveSelectedIds(store.elements, store.selectedIds)
       const worldDx = dx / scale
       const worldDy = dy / scale
 
-      effectiveIds.forEach(id => {
-        const el = store.elements.find(e => e.id === id)
-        if (el) {
-          if (el.type === 'triangle') {
-            updateElement(id, {
-              points: el.points.map(p => ({ x: p.x + worldDx, y: p.y + worldDy }))
-            })
-          } else {
-            updateElement(id, { x: el.x + worldDx, y: el.y + worldDy })
-          }
-        }
-      })
-    } else if (isPanning) {
-      panViewport(dx, dy) 
-    }
-    
+      // 获取当前正在拖拽的第一个元素（用于对齐计算）
+      const primaryElement = store.elements.find(el => el.id === effectiveIds[0])
 
+      if (primaryElement) {
+        // 计算基础位移后的位置
+        const testElement = {
+          ...primaryElement,
+          x: primaryElement.x + worldDx,
+          y: primaryElement.y + worldDy
+        }
+
+        // 如果是三角形，需要处理 points
+        if (primaryElement.type === 'triangle') {
+          testElement.points = primaryElement.points.map(p => ({
+            x: p.x + worldDx,
+            y: p.y + worldDy
+          }))
+        }
+
+        // 计算对齐吸附
+        const snapResult = calculateSnap(
+          testElement,
+          store.elements,
+          effectiveIds,
+          scale
+        )
+
+        const snapLines = snapResult.lines
+        store.snapLines = snapLines
+
+        // 应用吸附偏移
+        const finalDx = worldDx + snapResult.snapOffset.dx
+        const finalDy = worldDy + snapResult.snapOffset.dy
+
+        effectiveIds.forEach(id => {
+          const el = store.elements.find(e => e.id === id)
+          if (el) {
+            if (el.type === 'triangle') {
+              updateElement(id, {
+                points: el.points.map(p => ({
+                  x: p.x + finalDx,
+                  y: p.y + finalDy
+                }))
+              })
+            } else {
+              updateElement(id, {
+                x: el.x + finalDx,
+                y: el.y + finalDy
+              })
+            }
+          }
+        })
+      } else {
+        // 降级处理：如果没有找到主元素，直接移动
+        effectiveIds.forEach(id => {
+          const el = store.elements.find(e => e.id === id)
+          if (el) {
+            if (el.type === 'triangle') {
+              updateElement(id, {
+                points: el.points.map(p => ({
+                  x: p.x + worldDx,
+                  y: p.y + worldDy
+                }))
+              })
+            } else {
+              updateElement(id, {
+                x: el.x + worldDx,
+                y: el.y + worldDy
+              })
+            }
+          }
+        })
+      }
+    } else if (isPanning) {
+      panViewport(dx, dy)
+    }
     lastMousePos = { x: screenPos.x, y: screenPos.y }
   }
 
@@ -672,6 +737,8 @@ export function useInteraction() {
  * 结束当前交互状态，保存历史记录，重置光标
  */
   const handleMouseUp = (e, canvasEl) => {
+    snapLines = []
+    store.snapLines = []
     if (isResizing) {
       const selectedElements = store.elements.filter(el => store.selectedIds.includes(el.id))
 

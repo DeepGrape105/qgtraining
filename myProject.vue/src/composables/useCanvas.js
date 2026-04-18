@@ -3,6 +3,7 @@ import { useCanvasStore } from '../store/canvasStore'
 import Renderer from './Renderer'
 import { drawSelectionBox } from '../utils/selectionRenderer'
 import { getElementsBounds } from '../utils/Geometry'
+import { drawSnapLines } from '../utils/snapRenderer'
 
 /**
  * useCanvas Composable
@@ -238,6 +239,9 @@ export function useCanvas() {
     }
 
     ctx.restore()
+    if (store.snapLines && store.snapLines.length > 0) {
+      drawSnapLines(ctx, store.snapLines, store.viewport, width, height)
+    }
 
     // 递归调用，实现 60FPS 动画循环
     animationFrameId = requestAnimationFrame(renderLoop)

@@ -11,7 +11,6 @@
         @click="triggerUpload" 
         :disabled="isUploading"
       >
-        <span class="icon">🖼️</span>
         {{ isUploading ? '上传中...' : '插入图片' }}
       </button>
       <input 
@@ -74,7 +73,7 @@
 
     <div class="tool-group">
       <button class="tool-btn export-btn" @click="exportToImage">
-        <span class="icon">⬇️</span> 导出为 PNG
+         导出为 PNG
       </button>
     </div>
 
