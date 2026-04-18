@@ -154,94 +154,35 @@ onBeforeUnmount(() => {
     editor.value.destroy()
   }
 })
+
+// 自定义全选快捷键，阻止事件冒泡
+const SelectAll = Extension.create({
+  name: 'selectAll',
+  addKeyboardShortcuts() {
+    return {
+      'Mod-a': ({ editor }) => {
+        editor.commands.selectAll()
+        return true  // 返回 true 表示已处理，不会继续传播
+      }
+    }
+  },
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        props: {
+          handleKeyDown(view, event) {
+            // 如果是 Ctrl+A 或 Cmd+A，阻止事件冒泡到画布
+            if ((event.ctrlKey || event.metaKey) && event.key === 'a') {
+              event.stopPropagation()
+              // 不阻止默认行为，让编辑器自己处理全选
+            }
+            return false
+          }
+        }
+      })
+    ]
+  }
+})
 </script>
 
-<style scoped>
-/* 终极拦截器：放在全屏幕最顶层（比编辑器低一层），吃掉所有空白处的点击 */
-.click-outside-catcher {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 9998; 
-  cursor: default;
-}
-
-.text-editor-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  padding: 0;
-  margin: 0;
-  background: transparent !important;   /* ← 确保透明 */
-}
-
-.tiptap-wrapper {
-  width: 100%;
-  height: 100%;
-  background: transparent !important;   /* ← 新增 */
-}
-
-:deep(.ProseMirror) {
-  width: 100%;
-  height: 100%;
-  outline: none !important;
-  border: none !important;
-  padding: 8px;
-  margin: 0;
-  background: transparent;
-  color: inherit;
-  font-size: inherit;
-  font-family: inherit;
-  font-weight: inherit;      /* ← 新增 */
-  font-style: inherit;       /* ← 新增 */
-  text-decoration: inherit;  /* ← 新增 */
-  line-height: 1.4;
-  caret-color: #000000;
-  box-sizing: border-box;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-/* 去除默认段落的上下边距，保证高度测算与 Canvas 精准对齐 */
-:deep(.ProseMirror p) {
-  margin: 0;
-}
-
-:deep(.ProseMirror:focus) {
-  background: rgba(24, 144, 255, 0.08);
-  border-radius: 4px;
-}
-
-/* 悬浮菜单样式 */
-.bubble-menu {
-  display: flex;
-  background-color: #ffffff;
-  padding: 4px;
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  border: 1px solid #e2e8f0;
-  gap: 4px;
-}
-
-.bubble-menu button {
-  border: none;
-  background: none;
-  padding: 4px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  color: #475569;
-}
-
-.bubble-menu button:hover {
-  background-color: #f1f5f9;
-}
-
-.bubble-menu button.is-active {
-  background-color: #e2e8f0;
-  font-weight: bold;
-  color: #0f172a;
-}
-</style>
+<style scoped src="../styles/richTextEditor.css"></style>

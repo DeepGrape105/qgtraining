@@ -1,11 +1,23 @@
+// src/utils/minimapRenderer.js
+import { useCanvasStore } from '../store/canvasStore'
+
 export function drawMinimap(ctx, size, bounds, minimapScale, getViewportRect, vw, vh) {
+  const store = useCanvasStore()
+
   ctx.clearRect(0, 0, size, size)
-  ctx.fillStyle = '#ffffff'
+
+  // 背景
+  ctx.fillStyle = '#fafafa'
   ctx.fillRect(0, 0, size, size)
 
+  // 绘制网格（根据动态边界调整网格密度）
   ctx.strokeStyle = '#e5e7eb'
   ctx.lineWidth = 0.5
-  const gridStep = 250 * minimapScale.value
+  const b = bounds.value
+  const canvasWidth = b.maxX - b.minX
+  const canvasHeight = b.maxY - b.minY
+  const gridStep = Math.max(50, Math.min(250, canvasWidth / 20)) * minimapScale.value
+
   for (let i = 0; i <= size; i += gridStep) {
     ctx.beginPath()
     ctx.moveTo(i, 0)
@@ -17,48 +29,16 @@ export function drawMinimap(ctx, size, bounds, minimapScale, getViewportRect, vw
     ctx.stroke()
   }
 
-  ctx.strokeStyle = '#ff4d4f'
-  ctx.lineWidth = 1.5
-  ctx.setLineDash([4, 4])
-  ctx.strokeRect(0, 0, size, size)
-  ctx.setLineDash([])
+  // 绘制元素轮廓
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.12)'
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.08)'
+  ctx.lineWidth = 0.5
 
-  const rect = getViewportRect(vw, vh)
-
-  ctx.fillStyle = 'rgba(24, 144, 255, 0.15)'
-  ctx.fillRect(rect.x, rect.y, rect.w, rect.h)
-  ctx.strokeStyle = '#1890ff'
-  ctx.lineWidth = 2
-  ctx.strokeRect(rect.x, rect.y, rect.w, rect.h)
-
-  ctx.fillStyle = '#1890ff'
-  const handle = 4
-  const corners = [
-    [rect.x, rect.y],
-    [rect.x + rect.w - handle, rect.y],
-    [rect.x, rect.y + rect.h - handle],
-    [rect.x + rect.w - handle, rect.y + rect.h - handle]
-  ]
-  corners.forEach(([x, y]) => { ctx.fillRect(x, y, handle, handle) })
-}
-
-export function drawPreview(ctx, size, store) {
-  ctx.clearRect(0, 0, size, size)
-  ctx.fillStyle = '#ffffff'
-  ctx.fillRect(0, 0, size, size)
-
-  const { offsetX, offsetY, scale } = store.viewport
-  const worldX = -offsetX / scale
-  const worldY = -offsetY / scale
-  const worldW = size / scale
-  const worldH = size / scale
-
-  ctx.fillStyle = 'rgba(24, 144, 255, 0.1)'
-  ctx.strokeStyle = 'rgba(24, 144, 255, 0.5)'
-  ctx.lineWidth = 1.5
+  const s = minimapScale.value
 
   store.elements.forEach(el => {
     let x, y, w, h
+
     if (el.type === 'circle') {
       x = el.x - el.radius
       y = el.y - el.radius
@@ -78,13 +58,34 @@ export function drawPreview(ctx, size, store) {
       h = el.height || 0
     }
 
-    if (x + w > worldX && x < worldX + worldW && y + h > worldY && y < worldY + worldH) {
-      const rx = (x - worldX) * scale
-      const ry = (y - worldY) * scale
-      const rw = w * scale
-      const rh = h * scale
-      ctx.fillRect(rx, ry, rw, rh)
-      ctx.strokeRect(rx, ry, rw, rh)
+    const minimapX = (x - b.minX) * s
+    const minimapY = (y - b.minY) * s
+    const minimapW = w * s
+    const minimapH = h * s
+
+    if (minimapW >= 1 && minimapH >= 1) {
+      ctx.fillRect(minimapX, minimapY, minimapW, minimapH)
+      ctx.strokeRect(minimapX, minimapY, minimapW, minimapH)
     }
   })
+
+  // 绘制视口矩形
+  const rect = getViewportRect(vw, vh)
+
+  ctx.fillStyle = 'rgba(24, 144, 255, 0.12)'
+  ctx.fillRect(rect.x, rect.y, rect.w, rect.h)
+  ctx.strokeStyle = '#1890ff'
+  ctx.lineWidth = 2
+  ctx.strokeRect(rect.x, rect.y, rect.w, rect.h)
+
+  // 四角把手
+  ctx.fillStyle = '#1890ff'
+  const handle = 4
+  const corners = [
+    [rect.x, rect.y],
+    [rect.x + rect.w - handle, rect.y],
+    [rect.x, rect.y + rect.h - handle],
+    [rect.x + rect.w - handle, rect.y + rect.h - handle]
+  ]
+  corners.forEach(([x, y]) => { ctx.fillRect(x, y, handle, handle) })
 }

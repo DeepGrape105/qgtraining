@@ -109,18 +109,4 @@ onUnmounted(() => {
 })
 </script>
 
-<style scoped>
-.minimap-container {
-  position: fixed;
-  left: 20px;
-  bottom: 20px;
-  z-index: 1000;
-}
-.minimap-canvas {
-  border-radius: 12px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  cursor: default;
-  background: #fff;
-}
-</style>
+<style scoped src="../styles/minimap.css"></style>

@@ -387,9 +387,6 @@ export function useInteraction() {
         return
       }
     }
-
-    // ========== 点击元素检测 ==========
-
     
     // ========== 点击元素检测 ==========
     let clickedEl = null
@@ -739,8 +736,8 @@ export function useInteraction() {
   const handleCircleResize = (element, worldPos, resizeStartSize) => {
     const startDist = resizeStartSize.radius || element.radius
     const currentDist = getDistance(worldPos, { x: element.x, y: element.y })
-    const scaleFactor = getScaleFactor(startDist, currentDist)
-    updateElement(element.id, { radius: Math.max(10, startDist * scaleFactor) })
+    const scaleFactor = currentDist / startDist
+    updateElement(element.id, { radius:startDist * scaleFactor })
   }
 
   const handleTriangleResize = (element, worldPos, dx, dy, resizeHandle, resizeStartSize) => {
@@ -751,7 +748,7 @@ export function useInteraction() {
       const cy = (points[0].y + points[1].y + points[2].y) / 3
       const startDist = getDistance(points[0], { x: cx, y: cy })
       const currentDist = getDistance(worldPos, { x: cx, y: cy })
-      const scaleFactor = getScaleFactor(startDist, currentDist)
+      const scaleFactor = currentDist / startDist
 
       updateElement(element.id, {
         points: points.map(p => ({
@@ -775,14 +772,14 @@ export function useInteraction() {
     let newX = resizeStartSize.x
     let newY = resizeStartSize.y
 
-    if (resizeHandle?.includes('r')) newWidth = Math.max(20, resizeStartSize.width + dx)
+    if (resizeHandle?.includes('r')) newWidth = resizeStartSize.width + dx
     if (resizeHandle?.includes('l')) {
-      newWidth = Math.max(20, resizeStartSize.width - dx)
+      newWidth = resizeStartSize.width - dx
       newX = resizeStartSize.x + dx
     }
-    if (resizeHandle?.includes('b')) newHeight = Math.max(20, resizeStartSize.height + dy)
+    if (resizeHandle?.includes('b')) newHeight = resizeStartSize.height + dy
     if (resizeHandle?.includes('t')) {
-      newHeight = Math.max(20, resizeStartSize.height - dy)
+      newHeight = resizeStartSize.height - dy
       newY = resizeStartSize.y + dy
     }
 
@@ -799,7 +796,7 @@ export function useInteraction() {
 
     const startDist = getDistance(resizeStartPos, { x: cx, y: cy })
     const currentDist = getDistance(worldPos, { x: cx, y: cy })
-    const scaleFactor = getScaleFactor(startDist, currentDist, 0.5, 2)
+    const scaleFactor = currentDist / startDist
 
     const startElements = resizeStartSize.elements
     selectedElements.forEach(el => {
@@ -808,7 +805,7 @@ export function useInteraction() {
 
       if (el.type === 'circle') {
         updateElement(el.id, {
-          radius: Math.max(5, startEl.radius * scaleFactor),
+          radius: startEl.radius * scaleFactor,  // 🌟 修正：用 startEl.radius
           x: cx + (startEl.x - cx) * scaleFactor,
           y: cy + (startEl.y - cy) * scaleFactor
         })
@@ -835,8 +832,8 @@ export function useInteraction() {
         })
       } else {
         updateElement(el.id, {
-          width: Math.max(10, startEl.width * scaleFactor),
-          height: Math.max(10, startEl.height * scaleFactor),
+          width: startEl.width * scaleFactor,
+          height: startEl.height * scaleFactor,
           x: cx + (startEl.x - cx) * scaleFactor,
           y: cy + (startEl.y - cy) * scaleFactor
         })

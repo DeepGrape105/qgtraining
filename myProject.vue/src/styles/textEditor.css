@@ -1,0 +1,111 @@
+.text-editor-overlay {
+  background: transparent;
+}
+
+:deep(.ProseMirror) {
+  outline: none !important;
+  word-break: break-word;
+  white-space: pre-wrap;
+  line-height: 1.4 !important;
+  color: inherit;
+  /* 允许继承容器颜色 */
+}
+
+:deep(.ProseMirror p) {
+  margin: 0 !important;
+}
+
+/* 🌟 样式强制叠加补丁 🌟 */
+:deep(.ProseMirror strong) {
+  font-weight: bold !important;
+  display: inline;
+}
+
+:deep(.ProseMirror em) {
+  font-style: italic !important;
+  display: inline;
+}
+
+:deep(.ProseMirror u) {
+  text-decoration: underline !important;
+  display: inline;
+}
+
+:deep(.ProseMirror s) {
+  text-decoration: line-through !important;
+  display: inline;
+}
+
+/* 🌟 补全所有嵌套组合，解决下划线、删除线与 B/I 共存问题 */
+:deep(.ProseMirror strong u),
+:deep(.ProseMirror u strong) {
+  font-weight: bold !important;
+  text-decoration: underline !important;
+  display: inline;
+}
+
+:deep(.ProseMirror strong s),
+:deep(.ProseMirror s strong) {
+  font-weight: bold !important;
+  text-decoration: line-through !important;
+  display: inline;
+}
+
+:deep(.ProseMirror strong em),
+:deep(.ProseMirror em strong) {
+  font-weight: bold !important;
+  text-decoration: italic !important;
+  display: inline;
+}
+
+:deep(.ProseMirror em u),
+:deep(.ProseMirror u em) {
+  font-style: italic !important;
+  text-decoration: underline !important;
+  display: inline;
+}
+
+:deep(.ProseMirror em s),
+:deep(.ProseMirror s em) {
+  font-style: italic !important;
+  text-decoration: line-through !important;
+  display: inline;
+}
+
+:deep(.ProseMirror u s),
+:deep(.ProseMirror s u) {
+  text-decoration: underline !important;
+  text-decoration: line-through !important;
+  display: inline;
+}
+
+
+:deep(.ProseMirror strong em u),
+:deep(.ProseMirror strong u em),
+:deep(.ProseMirror em strong u),
+:deep(.ProseMirror em u strong),
+:deep(.ProseMirror u strong em),
+:deep(.ProseMirror u em strong) {
+  font-weight: bold !important;
+  font-style: italic !important;
+  text-decoration: underline !important;
+  display: inline;
+}
+
+:deep(.ProseMirror strong em s),
+:deep(.ProseMirror strong s em),
+:deep(.ProseMirror em strong s),
+:deep(.ProseMirror em s strong),
+:deep(.ProseMirror s strong em),
+:deep(.ProseMirror s em strong) {
+  font-weight: bold !important;
+  font-style: italic !important;
+  text-decoration: line-through !important;
+  display: inline;
+}
+
+:deep(.ProseMirror mark) {
+  background-color: inherit;
+  /* 继承你设置的颜色 */
+  padding: 0;
+}

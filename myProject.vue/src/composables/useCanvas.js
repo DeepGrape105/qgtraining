@@ -336,6 +336,10 @@ export function useCanvas() {
           allElementsForBoundingBox.push(...groupElements)
         })
 
+        nonGroupElements.forEach(el => {
+          Renderer.drawHighlight(ctx, el, scale)
+        })
+
         if (allElementsForBoundingBox.length > 0) {
           drawMultiSelectHighlight(ctx, allElementsForBoundingBox, scale, false)
         }
