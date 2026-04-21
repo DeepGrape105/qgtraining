@@ -1,0 +1,23 @@
+server:
+  port: 8081
+
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/knowledge_graph?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf-8&allowPublicKeyRetrieval=true
+    username: root
+    password: admin123
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+  application:
+    name: brainstorm
+
+# 硅基流动配置
+siliconflow:
+  api-key: sk-syqcrvodbtcyistuatrfebbjsngxwmbndxbzjblafleegaik
+  api-url: https://api.siliconflow.cn/v1/chat/completions
+  model: Qwen/Qwen2.5-72B-Instruct
